@@ -211,10 +211,10 @@ async function solve() {
   const idle = () => new Promise(r => map.once('idle', r));
   const pre = document.createElement('pre'); pre.id = 'solveout'; pre.style.cssText = 'position:absolute;left:8px;top:150px;z-index:30;background:#fff;max-height:60vh;overflow:auto;font-size:10px;padding:6px;max-width:90vw;white-space:pre-wrap'; document.body.appendChild(pre);
   const out = { designs: {}, towns: {} }, placed = [];
-  const items = DATA.designs.map(d => ({ k: 'designs', name: d.d, lat: d.lat0 || d.lat, lng: d.lng0 || d.lng, R: (d.R || 136) + 22 }))
-    .concat(DATA.clusters.map(c => ({ k: 'towns', name: c.t, lat: c.lat, lng: c.lng, R: c.R + 12 })));
+  const items = DATA.designs.map(d => ({ k: 'designs', name: d.d, lat: d.lat0 || d.lat, lng: d.lng0 || d.lng, R: (d.R || 136) + 45 }))
+    .concat(DATA.clusters.map(c => ({ k: 'towns', name: c.t, lat: c.lat, lng: c.lng, R: c.R + 28 })));
   for (const it of items) {
-    map.jumpTo({ center: [it.lng, it.lat], zoom: 12.6, pitch: 0, bearing: 0 }); await idle(); await new Promise(r => setTimeout(r, 250));
+    map.jumpTo({ center: [it.lng, it.lat], zoom: 14, pitch: 0, bearing: 0 }); await idle(); await new Promise(r => setTimeout(r, 250));
     const kx = 111320 * Math.cos(it.lat * Math.PI / 180), ky = 110574, P = ([x, y]) => [(x - it.lng) * kx, (y - it.lat) * ky];
     const segs = [], polys = [];
     for (const f of map.querySourceFeatures('openmaptiles', { sourceLayer: 'transportation' })) {
