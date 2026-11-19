@@ -127,7 +127,7 @@ let DATA, byId = new Map(), map, sel = null, DES = {};
 const toast = (m, ms = 2400) => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', ms); };
 const clean = s => (s || '').trim().replace(/^@+/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/[/?#].*$/, '').toLowerCase();
 
-const BUILD='11191214';fetch('data.json?v='+BUILD).then(r => r.json()).then(d => { DATA = d; d.houses.forEach(h => byId.set(h.id.toLowerCase(), h)); (d.designs || []).forEach(x => DES[x.d] = x); init(); })
+const BUILD='11191234';fetch('data.json?v='+BUILD).then(r => r.json()).then(d => { DATA = d; d.houses.forEach(h => byId.set(h.id.toLowerCase(), h)); (d.designs || []).forEach(x => DES[x.d] = x); init(); })
   .catch(() => { $('#load').textContent = 'Data load kaaledu. Refresh cheyandi 🙏'; });
 
 function init() {
