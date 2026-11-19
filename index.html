@@ -129,7 +129,7 @@ let DATA, byId = new Map(), map, sel = null, DES = {};
 const toast = (m, ms = 2400) => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', ms); };
 const clean = s => (s || '').trim().replace(/^@+/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/[/?#].*$/, '').toLowerCase();
 
-const BUILD='11191308';fetch('data.json?v='+BUILD).then(r => r.json()).then(d => { DATA = d; d.houses.forEach(h => byId.set(h.id.toLowerCase(), h)); (d.designs || []).forEach(x => DES[x.d] = x); init(); })
+const BUILD='11191317';fetch('data.json?v='+BUILD).then(r => r.json()).then(d => { DATA = d; d.houses.forEach(h => byId.set(h.id.toLowerCase(), h)); (d.designs || []).forEach(x => DES[x.d] = x); init(); })
   .catch(() => { $('#load').textContent = 'Data load kaaledu. Refresh cheyandi 🙏'; });
 
 function init() {
@@ -141,7 +141,14 @@ function init() {
   // compass: tap to face north again (trackpads can't rotate back easily)
   map.addControl(new maplibregl.NavigationControl({ showZoom: false, showCompass: true, visualizePitch: true }), 'bottom-right');
   // zoomed out to state/district view: always straighten the map
-  map.on('zoomend', () => { if (map.getZoom() < 10.5 && (Math.abs(map.getBearing()) > .5 || map.getPitch() > 1)) map.easeTo({ bearing: 0, pitch: 0, duration: 700 }); });
+  // zooming into a reel town by hand: turn to the town's front (reel view), like the reel camera
+  let zPrev = map.getZoom();
+  map.on('zoomstart', () => { zPrev = map.getZoom(); });
+  map.on('zoomend', () => { const z = map.getZoom();
+    if (z < 10.5 && (Math.abs(map.getBearing()) > .5 || map.getPitch() > 1)) map.easeTo({ bearing: 0, pitch: 0, duration: 700 });
+    else if (zPrev < 14.5 && z >= 14.5 && DATA) { const c = map.getCenter(); let best = null, bd = 1e9;
+      for (const d of DATA.designs) { const dm = Math.hypot((d.lng - c.lng) * 111320 * Math.cos(d.lat * Math.PI / 180), (d.lat - c.lat) * 110574); if (dm < bd) { bd = dm; best = d; } }
+      if (best && bd < best.R * 2.5 && Math.abs(((map.getBearing() - best.bear + 540) % 360) - 180) > 15) map.easeTo({ bearing: best.bear, pitch: Math.max(map.getPitch(), 50), duration: 900 }); } });
   map.on('error', e => console.warn(e && e.error));
 }
 
