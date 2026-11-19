@@ -180,6 +180,7 @@ function onLoad() {
   if (location.hash === '#solve') { solve(); return; }
   const h = decodeURIComponent(location.hash.replace(/^#@?/, ''));
   if (h && byId.has(h.toLowerCase())) setTimeout(() => select(h.toLowerCase(), true), 600);
+  addEventListener('hashchange', () => { const k = decodeURIComponent(location.hash.replace(/^#@?/, '')).toLowerCase(); if (byId.has(k) && k !== sel) select(k, true); });
 }
 
 function pillImage() { const c = document.createElement('canvas'); c.width = 48; c.height = 44; const x = c.getContext('2d');
@@ -192,7 +193,7 @@ function select(k, fly) {
   const h = byId.get(k); if (!h) return;
   sel = k;
   map.setFilter('house-ring', ['==', ['get', 'k'], k]); map.setFilter('house-sel', ['==', ['get', 'k'], k]);
-  if (fly) map.flyTo({ center: [h.lng, h.lat], zoom: 18, pitch: 60, bearing: -25, duration: 2600, essential: true });
+  if (fly) map.flyTo({ center: [h.lng, h.lat], zoom: 18.2, pitch: 60, bearing: -20, duration: 2600, essential: true });
   $('#popwho').textContent = '@' + h.id;
   $('#popwhere').textContent = `🏠 ${h.t} · ${h.d} district`;
   $('#popig').href = 'https://www.instagram.com/' + encodeURIComponent(h.id) + '/';
