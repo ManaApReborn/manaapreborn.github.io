@@ -126,7 +126,7 @@ let DATA, byId = new Map(), map, sel = null, DES = {};
 const toast = (m, ms = 2400) => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', ms); };
 const clean = s => (s || '').trim().replace(/^@+/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/[/?#].*$/, '').toLowerCase();
 
-fetch('data.json').then(r => r.json()).then(d => { DATA = d; d.houses.forEach(h => byId.set(h.id.toLowerCase(), h)); (d.designs || []).forEach(x => DES[x.d] = x); init(); })
+const BUILD='11191117';fetch('data.json?v='+BUILD).then(r => r.json()).then(d => { DATA = d; d.houses.forEach(h => byId.set(h.id.toLowerCase(), h)); (d.designs || []).forEach(x => DES[x.d] = x); init(); })
   .catch(() => { $('#load').textContent = 'Data load kaaledu. Refresh cheyandi 🙏'; });
 
 function init() {
@@ -268,7 +268,7 @@ function threeLayer() {
       this.loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder); this.towns = {};
       const mkScene = () => { const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff, 0x8a9a7a, 1.25)); const sn = new THREE.DirectionalLight(0xffffff, 1.6); sn.position.set(-40, 90, 60); sc.add(sn); return sc; };
       this.mkScene = mkScene;
-      this.loader.load('towns/houses.glb', g => {
+      this.loader.load('towns/houses.glb?v='+BUILD, g => {
         const V = g.scene.children.slice(), groups = {};
         DATA.houses.filter(h => !h.z).forEach(h => (groups[h.t] = groups[h.t] || []).push(h));
         for (const t in groups) { const hs = groups[t], c = hs[0];
@@ -285,7 +285,7 @@ function threeLayer() {
         for (const d of DATA.designs) { if (this.towns[d.slug]) continue;
           if (d.lng < b[0][0] - pad || d.lng > b[1][0] + pad || d.lat < b[0][1] - pad || d.lat > b[1][1] + pad) continue;
           this.towns[d.slug] = 'loading';
-          this.loader.load('towns/' + d.slug + '.glb', g => { const mc = maplibregl.MercatorCoordinate.fromLngLat([d.lng, d.lat], 0);
+          this.loader.load('towns/' + d.slug + '.glb?v=' + BUILD, g => { const mc = maplibregl.MercatorCoordinate.fromLngLat([d.lng, d.lat], 0);
             g.scene.scale.setScalar(DATA.scale);
             const flats = []; g.scene.updateMatrixWorld(true);
             g.scene.traverse(x => { if (!x.isMesh) return; x.geometry.computeBoundingBox(); const bb = x.geometry.boundingBox.clone().applyMatrix4(x.matrixWorld);
