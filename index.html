@@ -211,10 +211,10 @@ async function solve() {
   const idle = () => new Promise(r => map.once('idle', r));
   const pre = document.createElement('pre'); pre.id = 'solveout'; pre.style.cssText = 'position:absolute;left:8px;top:150px;z-index:30;background:#fff;max-height:60vh;overflow:auto;font-size:10px;padding:6px;max-width:90vw;white-space:pre-wrap'; document.body.appendChild(pre);
   const out = { designs: {}, towns: {} }, placed = [];
-  const items = DATA.designs.map(d => ({ k: 'designs', name: d.d, lat: d.lat, lng: d.lng, R: 85 * DATA.scale + 12 }))
-    .concat(DATA.clusters.map(c => ({ k: 'towns', name: c.t, lat: c.lat, lng: c.lng, R: c.R })));
+  const items = DATA.designs.map(d => ({ k: 'designs', name: d.d, lat: d.lat0 || d.lat, lng: d.lng0 || d.lng, R: (d.R || 136) + 22 }))
+    .concat(DATA.clusters.map(c => ({ k: 'towns', name: c.t, lat: c.lat, lng: c.lng, R: c.R + 12 })));
   for (const it of items) {
-    map.jumpTo({ center: [it.lng, it.lat], zoom: 13.2, pitch: 0, bearing: 0 }); await idle(); await new Promise(r => setTimeout(r, 250));
+    map.jumpTo({ center: [it.lng, it.lat], zoom: 12.6, pitch: 0, bearing: 0 }); await idle(); await new Promise(r => setTimeout(r, 250));
     const kx = 111320 * Math.cos(it.lat * Math.PI / 180), ky = 110574, P = ([x, y]) => [(x - it.lng) * kx, (y - it.lat) * ky];
     const segs = [], polys = [];
     for (const f of map.querySourceFeatures('openmaptiles', { sourceLayer: 'transportation' })) {
@@ -234,8 +234,8 @@ async function solve() {
       if (wet(c)) return false;
       for (const q of placed) { const qq = P([q.lng, q.lat]); if (Math.hypot(c[0] - qq[0], c[1] - qq[1]) < R + q.R + 20) return false; } return true; };
     let best = null;
-    for (const relax of [1, .75, .55]) {
-      for (let r = 0; r <= 1500 && !best; r += 40) { const m = Math.max(1, Math.round(2 * Math.PI * r / 40));
+    for (const relax of [1]) {  // never shrink: towns must not touch main roads
+      for (let r = 0; r <= 3000 && !best; r += 40) { const m = Math.max(1, Math.round(2 * Math.PI * r / 40));
         for (let i = 0; i < m; i++) { const a = i / m * 2 * Math.PI, c = [Math.cos(a) * r, Math.sin(a) * r]; if (ok(c, it.R * relax)) { best = c; break; } } }
       if (best) { best.relax = relax; break; }
     }
@@ -255,25 +255,22 @@ function threeLayer() {
       this.map = m; this.camera = new THREE.Camera(); this.scene = new THREE.Scene();
       this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8a9a7a, 1.25));
       const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(-40, 90, 60); this.scene.add(sun);
-      const LIST = DATA.houses.filter(h => !h.z), n = Math.max(1, LIST.length);
-      const body = new THREE.BoxGeometry(11, 7, 9); body.translate(0, 3.5, 0);
-      const roof = new THREE.ConeGeometry(9.2, 5.5, 4, 1); roof.rotateY(Math.PI / 4); roof.scale(1.0, 1, .86); roof.translate(0, 7 + 2.75, 0);
-      const door = new THREE.BoxGeometry(2.2, 3.6, .4); door.translate(0, 1.8, 4.6);
-      const lawn = new THREE.BoxGeometry(22, .4, 20); lawn.translate(0, .2, 1.2);
-      const mk = (g, mat) => { const im = new THREE.InstancedMesh(g, mat, n); im.instanceMatrix.setUsage(THREE.StaticDrawUsage); this.scene.add(im); return im; };
-      const mBody = mk(body, new THREE.MeshLambertMaterial({ color: 0xffffff })), mRoof = mk(roof, new THREE.MeshLambertMaterial({ color: 0xffffff })),
-            mDoor = mk(door, new THREE.MeshLambertMaterial({ color: 0x6b3f22 })), mLawn = mk(lawn, new THREE.MeshLambertMaterial({ color: 0x8fcf6a }));
-      const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), P = new THREE.Vector3(), S = new THREE.Vector3(1, 1, 1), Y = new THREE.Vector3(0, 1, 0), C = new THREE.Color();
-      LIST.forEach((h, i) => {
-        const mc = maplibregl.MercatorCoordinate.fromLngLat([h.lng, h.lat], 0);
-        P.set((mc.x - o.x) / s, 0, (mc.y - o.y) / s); Q.setFromAxisAngle(Y, (h.r % 4) * Math.PI / 2 + (h.r / 360 - .5) * .2); M.compose(P, Q, S);
-        mBody.setMatrixAt(i, M); mRoof.setMatrixAt(i, M); mDoor.setMatrixAt(i, M); mLawn.setMatrixAt(i, M);
-        mBody.setColorAt(i, C.setHex(WALL[h.c % WALL.length])); mRoof.setColorAt(i, C.setHex(ROOF[h.c % ROOF.length]));
-      });
-      [mBody, mRoof, mDoor, mLawn].forEach(x => { x.instanceMatrix.needsUpdate = true; if (x.instanceColor) x.instanceColor.needsUpdate = true; x.frustumCulled = false; });
+      // small-town houses: the same reel house models, one scene per town (own origin = no flicker)
+      this.loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder); this.towns = {};
+      const mkScene = () => { const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff, 0x8a9a7a, 1.25)); const sn = new THREE.DirectionalLight(0xffffff, 1.6); sn.position.set(-40, 90, 60); sc.add(sn); return sc; };
+      this.mkScene = mkScene;
+      this.loader.load('towns/houses.glb', g => {
+        const V = g.scene.children.slice(), groups = {};
+        DATA.houses.filter(h => !h.z).forEach(h => (groups[h.t] = groups[h.t] || []).push(h));
+        for (const t in groups) { const hs = groups[t], c = hs[0];
+          const oc = maplibregl.MercatorCoordinate.fromLngLat([c.lng, c.lat], 0), ms = oc.meterInMercatorCoordinateUnits(), sc = mkScene();
+          hs.forEach(h => { const mc = maplibregl.MercatorCoordinate.fromLngLat([h.lng, h.lat], 0); const k = V[(h.c * 7 + h.r) % V.length].clone();
+            k.position.set((mc.x - oc.x) / ms, 0, (mc.y - oc.y) / ms); k.rotation.y = (h.r % 4) * Math.PI / 2; k.scale.setScalar(DATA.scale); sc.add(k); });
+          sc.traverse(x => { if (x.isMesh) x.frustumCulled = false; });
+          this.towns['c:' + t] = { sc, mc: oc, ms }; }
+        m.triggerRepaint(); });
       this.renderer = new THREE.WebGLRenderer({ canvas: m.getCanvas(), context: gl, antialias: true }); this.renderer.autoClear = false;
       // reel-style district towns, loaded only when the camera comes close
-      this.loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder); this.towns = {};
       const check = () => { if (m.getZoom() < 12.2) return; const b = m.getBounds().toArray(), pad = .05;
         for (const d of DATA.designs) { if (this.towns[d.slug]) continue;
           if (d.lng < b[0][0] - pad || d.lng > b[1][0] + pad || d.lat < b[0][1] - pad || d.lat > b[1][1] + pad) continue;
@@ -283,7 +280,7 @@ function threeLayer() {
             g.scene.traverse(x => { if (x.isMesh) { x.frustumCulled = false; const mt = x.material; if (!mt) return; if (mt.transparent) mt.depthWrite = false;
               if (mt.map) { mt.polygonOffset = true; mt.polygonOffsetFactor = -6; mt.polygonOffsetUnits = -6; x.renderOrder = 2; } } });
             // each town gets its own scene + origin: keeps coordinates small so thin layers don't flicker (float precision)
-            const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff, 0x8a9a7a, 1.25)); const sn = new THREE.DirectionalLight(0xffffff, 1.6); sn.position.set(-40, 90, 60); sc.add(sn); sc.add(g.scene);
+            const sc = this.mkScene(); sc.add(g.scene);
             this.towns[d.slug] = { sc, mc, ms: mc.meterInMercatorCoordinateUnits() }; m.triggerRepaint(); }, undefined, () => { this.towns[d.slug] = null; }); } };
       m.on('moveend', check); check();
     },
@@ -291,7 +288,7 @@ function threeLayer() {
       const rot = new THREE.Matrix4().makeRotationX(Math.PI / 2);
       const l = new THREE.Matrix4().makeTranslation(o.x, o.y, o.z).scale(new THREE.Vector3(s, -s, s)).multiply(rot);
       this.camera.projectionMatrix = new THREE.Matrix4().fromArray(matrix).multiply(l);
-      this.renderer.resetState(); this.renderer.render(this.scene, this.camera);
+      this.renderer.resetState();
       const PM = new THREE.Matrix4().fromArray(matrix);
       for (const k in this.towns) { const t = this.towns[k]; if (!t || t === 'loading') continue;
         const lt = new THREE.Matrix4().makeTranslation(t.mc.x, t.mc.y, 0).scale(new THREE.Vector3(t.ms, -t.ms, t.ms)).multiply(rot);
