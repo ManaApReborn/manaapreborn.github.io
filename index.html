@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>Mana AP Reborn · మన ఆంధ్ర · virtual ooru map</title>
+<meta name="description" content="Mana AP Reborn followers andariki valla ooru lo virtual illu. Mee Instagram ID type chesi mee illu vethakandi.">
+<meta property="og:title" content="Mana AP Reborn · Mee illu ekkada?">
+<meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
+<meta name="theme-color" content="#1a2444">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<style>
+:root{--navy:#1a2444;--gold:#ffd84a;--green:#3fae4f;--cream:#fffaf0;--ink:#1a2444;--safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;font-family:Poppins,system-ui,sans-serif;color:var(--ink);background:#cfe8ef}
+#map{position:absolute;inset:0}
+.card{background:var(--cream);border:2.5px solid var(--navy);border-radius:18px;box-shadow:0 4px 0 var(--navy)}
+#top{position:absolute;left:12px;right:12px;top:calc(10px + var(--safe-t));display:flex;flex-direction:column;gap:8px;max-width:440px;z-index:5;pointer-events:none}
+#top>*{pointer-events:auto}
+#brand{display:flex;align-items:center;gap:10px;padding:8px 12px}
+#brand .logo{width:38px;height:38px;border-radius:12px;background:var(--navy);display:grid;place-items:center;font-size:21px;flex:none}
+#brand h1{margin:0;font-size:17px;line-height:1.1;font-weight:800}
+#brand h1 span{background:var(--gold);padding:0 6px;border-radius:6px;margin-left:4px}
+#brand small{display:block;font-size:12px;font-weight:600;opacity:.75}
+#brand .stat{margin-left:auto;text-align:center;line-height:1;padding-left:10px;border-left:2px solid #1a244422}
+#brand .stat b{display:block;font-size:20px;font-weight:800}
+#brand .stat i{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.06em;opacity:.7}
+#search{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px;position:relative}
+#search input{flex:1;border:0;background:transparent;font:600 15px Poppins,sans-serif;color:var(--ink);outline:none;min-width:0;padding:8px 0}
+#search input::placeholder{color:#1a244488}
+#search button{border:0;background:var(--navy);color:#fff;font:700 14px Poppins,sans-serif;padding:10px 16px;border-radius:12px;cursor:pointer}
+#sugg{position:absolute;left:0;right:0;top:calc(100% + 6px);padding:6px;display:none;max-height:50vh;overflow:auto}
+#sugg div{padding:9px 10px;border-radius:10px;cursor:pointer;font-weight:600;font-size:14px;display:flex;justify-content:space-between;gap:8px}
+#sugg div:hover,#sugg div.on{background:#ffd84a55}
+#sugg div em{font-style:normal;font-weight:500;opacity:.65;font-size:12px;white-space:nowrap}
+#bar{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(14px + var(--safe-b));display:flex;gap:4px;padding:6px;z-index:5;max-width:calc(100vw - 20px)}
+#bar button{border:0;background:transparent;font:700 11.5px Poppins,sans-serif;color:var(--ink);padding:6px 9px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;white-space:nowrap}
+#bar button span{font-size:19px;line-height:1.1}
+#bar button.cta{background:var(--navy);color:#fff;padding:6px 13px}
+#bar button:active{transform:translateY(1px)}
+.sheet{position:absolute;left:50%;transform:translate(-50%,0);bottom:calc(86px + var(--safe-b));width:min(440px,calc(100vw - 24px));max-height:58vh;overflow:auto;padding:14px 16px;z-index:6;display:none}
+.sheet h3{margin:0 0 8px;font-size:17px;font-weight:800;display:flex;justify-content:space-between;align-items:center}
+.sheet h3 button{border:0;background:#1a24441a;border-radius:10px;width:30px;height:30px;font-size:16px;cursor:pointer}
+.dist{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1.5px dashed #1a244426;cursor:pointer}
+.dist:last-child{border-bottom:0}
+.dist b{font-weight:700;font-size:14.5px}.dist small{display:block;font-weight:500;opacity:.7;font-size:12px}
+.dist .n{margin-left:auto;background:var(--green);color:#fff;font-weight:800;font-size:13px;border-radius:20px;padding:3px 11px}
+.steps{margin:0;padding-left:20px;font-weight:600;font-size:14.5px;line-height:1.55}
+.steps li{margin:4px 0}
+.btn{display:inline-block;margin-top:12px;background:var(--navy);color:#fff;text-decoration:none;font-weight:800;padding:11px 18px;border-radius:14px;font-size:14.5px}
+.note{font-size:11.5px;opacity:.7;margin-top:10px;font-weight:500}
+.town{background:var(--cream);border:2px solid var(--navy);border-radius:20px;padding:3px 4px 3px 10px;font:700 12.5px Poppins,sans-serif;display:flex;align-items:center;gap:6px;box-shadow:0 2.5px 0 var(--navy);cursor:pointer;white-space:nowrap}
+.town i{font-style:normal;background:var(--navy);color:#fff;border-radius:14px;padding:1px 8px;font-size:11.5px}
+.town.big{font-size:14px}.town.big i{background:var(--green)}
+body.zin .town{display:none}
+body.zfar .town.minor{display:none}
+body.zstate .town:not(.top){display:none}
+#pop{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(86px + var(--safe-b));width:min(380px,calc(100vw - 24px));padding:14px 16px;z-index:6;display:none}
+#pop .who{font-size:19px;font-weight:800;word-break:break-all}
+#pop .where{font-weight:600;font-size:13.5px;opacity:.8;margin-top:2px}
+#pop .row{display:flex;gap:8px;margin-top:12px}
+#pop .row a,#pop .row button{flex:1;text-align:center;border:2px solid var(--navy);border-radius:12px;padding:9px 8px;font:700 13px Poppins,sans-serif;color:var(--ink);background:#fff;text-decoration:none;cursor:pointer}
+#pop .row .p{background:var(--navy);color:#fff}
+#pop .x{position:absolute;right:10px;top:10px;border:0;background:#1a24441a;border-radius:10px;width:30px;height:30px;cursor:pointer;font-size:15px}
+#toast{position:absolute;left:50%;top:calc(130px + var(--safe-t));transform:translateX(-50%);background:var(--navy);color:#fff;font-weight:700;font-size:13.5px;padding:9px 16px;border-radius:14px;z-index:9;display:none;max-width:calc(100vw - 30px);text-align:center}
+#load{position:absolute;inset:0;display:grid;place-items:center;z-index:20;background:#cfe8ef;font-weight:800;font-size:16px;transition:opacity .4s}
+.maplibregl-ctrl-attrib{font-size:10px}
+@media (min-width:760px){#bar{bottom:20px}}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="load">🏠 Mana AP load avuthundi…</div>
+<div id="top">
+  <div id="brand" class="card">
+    <div class="logo">🏠</div>
+    <div><h1>Mana AP<span>Reborn</span></h1><small>మన ఆంధ్ర · followers virtual ooru</small></div>
+    <div class="stat"><b id="cnt">0</b><i>ILLU</i></div>
+  </div>
+  <form id="search" class="card" autocomplete="off">
+    <span aria-hidden="true">🔍</span>
+    <input id="q" type="search" placeholder="Mee Instagram ID type cheyandi" spellcheck="false" autocapitalize="none" aria-label="Instagram ID">
+    <button type="submit">Vethuku</button>
+    <div id="sugg" class="card"></div>
+  </form>
+</div>
+<div id="toast"></div>
+<div id="pop" class="card" role="dialog" aria-live="polite">
+  <button class="x" id="popx" aria-label="Close">✕</button>
+  <div class="who" id="popwho"></div>
+  <div class="where" id="popwhere"></div>
+  <div class="row"><a id="popig" class="p" target="_blank" rel="noopener">Instagram ↗</a><button id="popshare">Link copy 🔗</button></div>
+</div>
+<div id="sheetD" class="sheet card"><h3>Districts <button data-close>✕</button></h3><div id="dlist"></div></div>
+<div id="sheetJ" class="sheet card"><h3>Mee illu kavala? 🏠 <button data-close>✕</button></h3>
+  <ol class="steps">
+    <li><b>@mana_ap_reborn</b> ni follow avvandi</li>
+    <li>Latest reel lo <b>mee ooru peru</b> comment cheyandi (district + ooru)</li>
+    <li>Next update lo mee illu map lo mee ooru lo vastundi ✨</li>
+  </ol>
+  <a class="btn" href="https://www.instagram.com/mana_ap_reborn/" target="_blank" rel="noopener">Instagram lo open cheyandi ↗</a>
+  <div class="note">Ivi virtual illu matrame. Map lo position mee ooru daggara undi, mee nijamaina address kaadu.</div>
+</div>
+<div id="bar" class="card">
+  <button id="bD"><span>🗺️</span>Districts</button>
+  <button id="bAll"><span>🌏</span>Full map</button>
+  <button id="bRnd"><span>🎲</span>Random</button>
+  <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
+</div>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
+{
+const STYLE = window.MAP_STYLE || 'https://tiles.openfreemap.org/styles/liberty';
+const AP_BOUNDS = [[76.75, 12.6], [84.8, 19.25]];
+const ROOF = [0xd9542b, 0xe0782f, 0x2f7fbf, 0x3f9a6a, 0xb8483a, 0x7a5cc4];
+const WALL = [0xfff3dc, 0xf6e7c8, 0xffffff, 0xf1ede4, 0xfbe3d0, 0xe9f1f4];
+const $ = s => document.querySelector(s);
+let DATA, byId = new Map(), map, sel = null;
+const toast = (m, ms = 2400) => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', ms); };
+const clean = s => (s || '').trim().replace(/^@+/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/[/?#].*$/, '').toLowerCase();
+
+fetch('data.json').then(r => r.json()).then(d => { DATA = d; d.houses.forEach(h => byId.set(h.id.toLowerCase(), h)); init(); })
+  .catch(() => { $('#load').textContent = 'Data load kaaledu. Refresh cheyandi 🙏'; });
+
+function init() {
+  $('#cnt').textContent = DATA.houses.length;
+  map = new maplibregl.Map({ container: 'map', style: STYLE, bounds: AP_BOUNDS, fitBoundsOptions: { padding: { top: 140, bottom: 90, left: 20, right: 20 } },
+    maxPitch: 70, attributionControl: { compact: true }, dragRotate: true, hash: false, fadeDuration: 0 });
+  map.touchZoomRotate.enableRotation(); window.__map = map;
+  map.on('load', onLoad);
+  map.on('error', e => console.warn(e && e.error));
+}
+
+function geo(list, f) { return { type: 'FeatureCollection', features: list.map(x => ({ type: 'Feature', properties: f(x), geometry: { type: 'Point', coordinates: [x.lng, x.lat] } })) }; }
+
+function onLoad() {
+  // softer base: hide POI clutter, keep roads/places
+  for (const l of map.getStyle().layers) {
+    if ((/poi|housenumber|aeroway_label/.test(l.id) && l.type === 'symbol') || l.type === 'fill-extrusion') map.setLayoutProperty(l.id, 'visibility', 'none');
+  }
+  map.addSource('houses', { type: 'geojson', data: geo(DATA.houses, h => ({ id: h.id, t: h.t, d: h.d, k: h.id.toLowerCase() })) });
+  map.addLayer({ id: 'house-hit', type: 'circle', source: 'houses', paint: { 'circle-radius': ['interpolate', ['exponential', 2], ['zoom'], 12, 3, 17, 18, 20, 120], 'circle-opacity': 0 } });
+  map.addLayer(threeLayer());
+  map.addLayer({ id: 'house-ring', type: 'circle', source: 'houses', filter: ['==', ['get', 'k'], ''],
+    paint: { 'circle-radius': 26, 'circle-color': '#ffd84a', 'circle-opacity': .25, 'circle-stroke-color': '#ffd84a', 'circle-stroke-width': 3, 'circle-pitch-alignment': 'map' } });
+  map.addImage('pill', pillImage(), { pixelRatio: 2, stretchX: [[22, 26]], stretchY: [[20, 24]], content: [12, 8, 36, 36] });
+  map.addLayer({ id: 'house-label', type: 'symbol', source: 'houses', minzoom: 16.1,
+    layout: { 'text-field': ['concat', '@', ['get', 'id']], 'text-font': ['Noto Sans Bold'], 'text-size': ['interpolate', ['linear'], ['zoom'], 16.1, 11, 19, 14],
+      'icon-image': 'pill', 'icon-text-fit': 'both', 'icon-text-fit-padding': [2, 7, 2, 7],
+      'text-offset': [0, -2.6], 'text-anchor': 'bottom', 'icon-anchor': 'bottom', 'text-padding': 1, 'text-max-width': 40, 'symbol-z-order': 'viewport-y' },
+    paint: { 'text-color': '#111827' } });
+  map.addLayer({ id: 'house-sel', type: 'symbol', source: 'houses', filter: ['==', ['get', 'k'], ''],
+    layout: { 'text-field': ['concat', '@', ['get', 'id']], 'text-font': ['Noto Sans Bold'], 'text-size': 15, 'text-offset': [0, -2.4], 'text-anchor': 'bottom',
+      'icon-image': 'pill', 'icon-text-fit': 'both', 'icon-text-fit-padding': [3, 9, 3, 9], 'icon-anchor': 'bottom', 'text-allow-overlap': true, 'text-ignore-placement': true, 'icon-allow-overlap': true, 'icon-ignore-placement': true },
+    paint: { 'text-color': '#111827' } });
+
+  // town pills (HTML markers) for the zoomed-out view
+  DATA.towns.forEach((t, rank) => {
+    const el = document.createElement('div'); el.className = 'town' + (t.n >= 20 ? ' big' : '') + (t.hq ? ' hq' : ' minor') + (rank < 7 ? ' top' : ''); el.style.zIndex = 1000 - rank; el.innerHTML = `${t.t}<i>${t.n}</i>`;
+    el.onclick = e => { e.stopPropagation(); flyTown(t); };
+    new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([t.lng, t.lat]).addTo(map);
+  });
+  const zt = () => { const z = map.getZoom(); document.body.classList.toggle('zin', z > 14.3); document.body.classList.toggle('zfar', z < 8.4); document.body.classList.toggle('zstate', z < 7.2); }; map.on('zoom', zt); zt();
+
+  map.on('click', 'house-hit', e => { const f = e.features[0]; if (f) select(f.properties.k, false); });
+  map.on('mouseenter', 'house-hit', () => map.getCanvas().style.cursor = 'pointer');
+  map.on('mouseleave', 'house-hit', () => map.getCanvas().style.cursor = '');
+
+  $('#dlist').innerHTML = DATA.districts.map((d, i) => `<div class="dist" data-i="${i}"><div><b>${d.d}</b><small>${d.te}</small></div><span class="n">${d.n}</span></div>`).join('');
+  $('#dlist').onclick = e => { const r = e.target.closest('.dist'); if (!r) return; const d = DATA.districts[r.dataset.i]; closeSheets(); hidePop();
+    map.flyTo({ center: [d.lng, d.lat], zoom: 12.6, pitch: 35, bearing: 0, duration: 1800 }); };
+
+  $('#load').style.opacity = 0; setTimeout(() => $('#load').remove(), 450);
+  if (location.hash === '#solve') { solve(); return; }
+  const h = decodeURIComponent(location.hash.replace(/^#@?/, ''));
+  if (h && byId.has(h.toLowerCase())) setTimeout(() => select(h.toLowerCase(), true), 600);
+}
+
+function pillImage() { const c = document.createElement('canvas'); c.width = 48; c.height = 44; const x = c.getContext('2d');
+  x.fillStyle = '#1a2444'; rr(x, 1, 3, 46, 40, 18); x.fill(); x.fillStyle = '#ffffff'; rr(x, 3.5, 1, 41, 38, 16); x.fill();
+  x.lineWidth = 3; x.strokeStyle = '#1a2444'; rr(x, 3.5, 1, 41, 38, 16); x.stroke(); return x.getImageData(0, 0, 48, 44); }
+function rr(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
+function flyTown(t) { hidePop(); map.flyTo({ center: [t.lng, t.lat], zoom: t.n > 30 ? 16.2 : 16.8, pitch: 55, bearing: -18, duration: 2000 }); }
+
+function select(k, fly) {
+  const h = byId.get(k); if (!h) return;
+  sel = k;
+  map.setFilter('house-ring', ['==', ['get', 'k'], k]); map.setFilter('house-sel', ['==', ['get', 'k'], k]);
+  if (fly) map.flyTo({ center: [h.lng, h.lat], zoom: 18, pitch: 60, bearing: -25, duration: 2600, essential: true });
+  $('#popwho').textContent = '@' + h.id;
+  $('#popwhere').textContent = `🏠 ${h.t} · ${h.d} district`;
+  $('#popig').href = 'https://www.instagram.com/' + encodeURIComponent(h.id) + '/';
+  $('#pop').style.display = 'block'; closeSheets();
+  try { history.replaceState(null, '', '#' + h.id); } catch (e) {}
+  pulse();
+}
+function hidePop() { $('#pop').style.display = 'none'; sel = null; if (map && map.getLayer('house-ring')) { map.setFilter('house-ring', ['==', ['get', 'k'], '']); map.setFilter('house-sel', ['==', ['get', 'k'], '']); } }
+function pulse() { const t0 = performance.now(); const step = now => { if (!sel) return; const p = ((now - t0) % 1400) / 1400; map.setPaintProperty('house-ring', 'circle-radius', 18 + 22 * p); map.setPaintProperty('house-ring', 'circle-stroke-opacity', 1 - p); map.setPaintProperty('house-ring', 'circle-opacity', .3 * (1 - p)); requestAnimationFrame(step); }; requestAnimationFrame(step); }
+
+
+// ---------- one-time placement solver (#solve): find spots with no main road / rail / water under the town ----------
+const MAIN = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'rail', 'transit']);
+async function solve() {
+  const idle = () => new Promise(r => map.once('idle', r));
+  const pre = document.createElement('pre'); pre.id = 'solveout'; pre.style.cssText = 'position:absolute;left:8px;top:150px;z-index:30;background:#fff;max-height:60vh;overflow:auto;font-size:10px;padding:6px;max-width:90vw;white-space:pre-wrap'; document.body.appendChild(pre);
+  const out = { designs: {}, towns: {} }, placed = [];
+  const items = DATA.designs.map(d => ({ k: 'designs', name: d.d, lat: d.lat, lng: d.lng, R: 85 * DATA.scale + 12 }))
+    .concat(DATA.clusters.map(c => ({ k: 'towns', name: c.t, lat: c.lat, lng: c.lng, R: c.R })));
+  for (const it of items) {
+    map.jumpTo({ center: [it.lng, it.lat], zoom: 13.2, pitch: 0, bearing: 0 }); await idle(); await new Promise(r => setTimeout(r, 250));
+    const kx = 111320 * Math.cos(it.lat * Math.PI / 180), ky = 110574, P = ([x, y]) => [(x - it.lng) * kx, (y - it.lat) * ky];
+    const segs = [], polys = [];
+    for (const f of map.querySourceFeatures('openmaptiles', { sourceLayer: 'transportation' })) {
+      if (!MAIN.has(f.properties.class) || f.properties.brunnel === 'tunnel') continue;
+      const g = f.geometry, lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
+      for (const l of lines) for (let i = 1; i < l.length; i++) segs.push([P(l[i - 1]), P(l[i])]);
+    }
+    for (const f of map.querySourceFeatures('openmaptiles', { sourceLayer: 'water' })) {
+      const g = f.geometry, ps = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
+      for (const p of ps) polys.push(p.map(r => r.map(P)));
+    }
+    const dSeg = (p, [a, b]) => { const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy || 1; let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L; t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+    const inRing = (p, r) => { let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const a = r[i], b = r[j]; if ((a[1] > p[1]) !== (b[1] > p[1]) && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
+    const wet = p => polys.some(pg => inRing(p, pg[0]) && !pg.slice(1).some(h => inRing(p, h)));
+    const ok = (c, R) => { for (const s of segs) if (dSeg(c, s) < R) return false;
+      for (let a = 0; a < 8; a++) if (wet([c[0] + Math.cos(a * Math.PI / 4) * R * .8, c[1] + Math.sin(a * Math.PI / 4) * R * .8])) return false;
+      if (wet(c)) return false;
+      for (const q of placed) { const qq = P([q.lng, q.lat]); if (Math.hypot(c[0] - qq[0], c[1] - qq[1]) < R + q.R + 20) return false; } return true; };
+    let best = null;
+    for (const relax of [1, .75, .55]) {
+      for (let r = 0; r <= 1500 && !best; r += 40) { const m = Math.max(1, Math.round(2 * Math.PI * r / 40));
+        for (let i = 0; i < m; i++) { const a = i / m * 2 * Math.PI, c = [Math.cos(a) * r, Math.sin(a) * r]; if (ok(c, it.R * relax)) { best = c; break; } } }
+      if (best) { best.relax = relax; break; }
+    }
+    const b = best || [0, 0]; const lat = it.lat + b[1] / ky, lng = it.lng + b[0] / kx;
+    out[it.k][it.name] = [+lat.toFixed(6), +lng.toFixed(6)]; placed.push({ lat, lng, R: it.R });
+    pre.textContent = `${Object.keys(out.designs).length + Object.keys(out.towns).length}/${items.length} ${it.name}: ${best ? Math.round(Math.hypot(...b)) + 'm relax ' + best.relax : 'NOT FOUND'} segs ${segs.length}\n` + pre.textContent;
+  }
+  window.__place = out; pre.textContent = 'DONE\n' + JSON.stringify(out);
+}
+
+// ---------- 3D houses (three.js custom layer, instanced) ----------
+function threeLayer() {
+  const o = maplibregl.MercatorCoordinate.fromLngLat([80.6, 16.0], 0); const s = o.meterInMercatorCoordinateUnits();
+  return {
+    id: 'houses3d', type: 'custom', renderingMode: '3d',
+    onAdd(m, gl) {
+      this.map = m; this.camera = new THREE.Camera(); this.scene = new THREE.Scene();
+      this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8a9a7a, 1.25));
+      const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(-40, 90, 60); this.scene.add(sun);
+      const LIST = DATA.houses.filter(h => !h.z), n = Math.max(1, LIST.length);
+      const body = new THREE.BoxGeometry(11, 7, 9); body.translate(0, 3.5, 0);
+      const roof = new THREE.ConeGeometry(9.2, 5.5, 4, 1); roof.rotateY(Math.PI / 4); roof.scale(1.0, 1, .86); roof.translate(0, 7 + 2.75, 0);
+      const door = new THREE.BoxGeometry(2.2, 3.6, .4); door.translate(0, 1.8, 4.6);
+      const lawn = new THREE.BoxGeometry(22, .4, 20); lawn.translate(0, .2, 1.2);
+      const mk = (g, mat) => { const im = new THREE.InstancedMesh(g, mat, n); im.instanceMatrix.setUsage(THREE.StaticDrawUsage); this.scene.add(im); return im; };
+      const mBody = mk(body, new THREE.MeshLambertMaterial({ color: 0xffffff })), mRoof = mk(roof, new THREE.MeshLambertMaterial({ color: 0xffffff })),
+            mDoor = mk(door, new THREE.MeshLambertMaterial({ color: 0x6b3f22 })), mLawn = mk(lawn, new THREE.MeshLambertMaterial({ color: 0x8fcf6a }));
+      const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), P = new THREE.Vector3(), S = new THREE.Vector3(1, 1, 1), Y = new THREE.Vector3(0, 1, 0), C = new THREE.Color();
+      LIST.forEach((h, i) => {
+        const mc = maplibregl.MercatorCoordinate.fromLngLat([h.lng, h.lat], 0);
+        P.set((mc.x - o.x) / s, 0, (mc.y - o.y) / s); Q.setFromAxisAngle(Y, (h.r % 4) * Math.PI / 2 + (h.r / 360 - .5) * .2); M.compose(P, Q, S);
+        mBody.setMatrixAt(i, M); mRoof.setMatrixAt(i, M); mDoor.setMatrixAt(i, M); mLawn.setMatrixAt(i, M);
+        mBody.setColorAt(i, C.setHex(WALL[h.c % WALL.length])); mRoof.setColorAt(i, C.setHex(ROOF[h.c % ROOF.length]));
+      });
+      [mBody, mRoof, mDoor, mLawn].forEach(x => { x.instanceMatrix.needsUpdate = true; if (x.instanceColor) x.instanceColor.needsUpdate = true; x.frustumCulled = false; });
+      this.renderer = new THREE.WebGLRenderer({ canvas: m.getCanvas(), context: gl, antialias: true }); this.renderer.autoClear = false;
+      // reel-style district towns, loaded only when the camera comes close
+      this.loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder); this.towns = {};
+      const check = () => { if (m.getZoom() < 12.2) return; const b = m.getBounds().toArray(), pad = .05;
+        for (const d of DATA.designs) { if (this.towns[d.slug]) continue;
+          if (d.lng < b[0][0] - pad || d.lng > b[1][0] + pad || d.lat < b[0][1] - pad || d.lat > b[1][1] + pad) continue;
+          this.towns[d.slug] = 'loading';
+          this.loader.load('towns/' + d.slug + '.glb', g => { const mc = maplibregl.MercatorCoordinate.fromLngLat([d.lng, d.lat], 0);
+            g.scene.scale.setScalar(DATA.scale); g.scene.rotation.y = Math.PI;
+            g.scene.traverse(x => { if (x.isMesh) { x.frustumCulled = false; const mt = x.material; if (!mt) return; if (mt.transparent) mt.depthWrite = false;
+              if (mt.map) { mt.polygonOffset = true; mt.polygonOffsetFactor = -6; mt.polygonOffsetUnits = -6; x.renderOrder = 2; } } });
+            // each town gets its own scene + origin: keeps coordinates small so thin layers don't flicker (float precision)
+            const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff, 0x8a9a7a, 1.25)); const sn = new THREE.DirectionalLight(0xffffff, 1.6); sn.position.set(-40, 90, 60); sc.add(sn); sc.add(g.scene);
+            this.towns[d.slug] = { sc, mc, ms: mc.meterInMercatorCoordinateUnits() }; m.triggerRepaint(); }, undefined, () => { this.towns[d.slug] = null; }); } };
+      m.on('moveend', check); check();
+    },
+    render(gl, matrix) {
+      const rot = new THREE.Matrix4().makeRotationX(Math.PI / 2);
+      const l = new THREE.Matrix4().makeTranslation(o.x, o.y, o.z).scale(new THREE.Vector3(s, -s, s)).multiply(rot);
+      this.camera.projectionMatrix = new THREE.Matrix4().fromArray(matrix).multiply(l);
+      this.renderer.resetState(); this.renderer.render(this.scene, this.camera);
+      const PM = new THREE.Matrix4().fromArray(matrix);
+      for (const k in this.towns) { const t = this.towns[k]; if (!t || t === 'loading') continue;
+        const lt = new THREE.Matrix4().makeTranslation(t.mc.x, t.mc.y, 0).scale(new THREE.Vector3(t.ms, -t.ms, t.ms)).multiply(rot);
+        this.camera.projectionMatrix = PM.clone().multiply(lt); this.renderer.render(t.sc, this.camera); }
+    }
+  };
+}
+
+// ---------- search ----------
+const q = $('#q'), sg = $('#sugg'); let hits = [], hi = -1;
+function suggest() {
+  const v = clean(q.value); hi = -1;
+  if (v.length < 2) { sg.style.display = 'none'; return; }
+  hits = []; for (const h of DATA.houses) { const k = h.id.toLowerCase(); if (k.includes(v)) { hits.push([k.startsWith(v) ? 0 : 1, h]); if (hits.length > 60) break; } }
+  hits.sort((a, b) => a[0] - b[0] || a[1].id.length - b[1].id.length); hits = hits.slice(0, 7).map(x => x[1]);
+  sg.innerHTML = hits.length ? hits.map((h, i) => `<div data-i="${i}">@${h.id}<em>${h.t}</em></div>`).join('') : '<div style="cursor:default">Ee ID inka map lo ledu 🙁<em>“Mee illu kavala?” chudandi</em></div>';
+  sg.style.display = 'block';
+}
+q.addEventListener('input', suggest);
+q.addEventListener('keydown', e => { if (!hits.length || sg.style.display !== 'block') return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); hi = (hi + (e.key === 'ArrowDown' ? 1 : -1) + hits.length) % hits.length; [...sg.children].forEach((c, i) => c.classList.toggle('on', i === hi)); } });
+sg.addEventListener('click', e => { const r = e.target.closest('[data-i]'); if (!r) return; go(hits[+r.dataset.i]); });
+$('#search').addEventListener('submit', e => { e.preventDefault(); const v = clean(q.value); if (!v) return;
+  const h = byId.get(v) || (hi >= 0 ? hits[hi] : null) || (hits.length === 1 ? hits[0] : null);
+  if (h) go(h); else if (hits.length) { suggest(); toast('Kinda list lo mee ID select cheyandi 👇'); } else { toast('@' + v + ' inka map lo ledu. “Mee illu kavala?” chudandi 🏠', 3600); } });
+function go(h) { sg.style.display = 'none'; q.value = '@' + h.id; q.blur(); select(h.id.toLowerCase(), true); }
+document.addEventListener('click', e => { if (!e.target.closest('#search')) sg.style.display = 'none'; });
+
+// ---------- bottom bar & sheets ----------
+function closeSheets() { document.querySelectorAll('.sheet').forEach(s => s.style.display = 'none'); }
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheets);
+$('#bD').onclick = () => { const s = $('#sheetD'), open = s.style.display === 'block'; closeSheets(); hidePop(); if (!open) s.style.display = 'block'; };
+$('#bJ').onclick = () => { const s = $('#sheetJ'), open = s.style.display === 'block'; closeSheets(); hidePop(); if (!open) s.style.display = 'block'; };
+$('#bAll').onclick = () => { closeSheets(); hidePop(); map.fitBounds(AP_BOUNDS, { padding: { top: 140, bottom: 90, left: 20, right: 20 }, pitch: 0, bearing: 0, duration: 1600 }); };
+$('#bRnd').onclick = () => { closeSheets(); const h = DATA.houses[Math.floor(Math.random() * DATA.houses.length)]; select(h.id.toLowerCase(), true); };
+$('#popx').onclick = () => { hidePop(); try { history.replaceState(null, '', location.pathname); } catch (e) {} };
+$('#popshare').onclick = async () => { const url = location.origin + location.pathname + '#' + (sel ? byId.get(sel).id : '');
+  try { await navigator.clipboard.writeText(url); toast('Link copy ayyindi ✅ Friends ki pampandi'); } catch (e) { toast(url, 5000); } };
+}
+</script>
+</body>
+</html>
