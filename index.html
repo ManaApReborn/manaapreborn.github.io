@@ -115,6 +115,7 @@ body.zstate .town:not(.top){display:none}
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 {
 const STYLE = window.MAP_STYLE || 'https://tiles.openfreemap.org/styles/liberty';
 const AP_BOUNDS = [[76.75, 12.6], [84.8, 19.25]];
@@ -278,6 +279,7 @@ function threeLayer() {
           this.towns['c:' + t] = { sc, mc: oc, ms }; }
         m.triggerRepaint(); });
       this.renderer = new THREE.WebGLRenderer({ canvas: m.getCanvas(), context: gl, antialias: true }); this.renderer.autoClear = false;
+      try { this.env = new THREE.PMREMGenerator(this.renderer).fromScene(new RoomEnvironment(), .04).texture; } catch (e) { this.env = null; }
       // reel-style district towns, loaded only when the camera comes close
       const check = () => { if (m.getZoom() < 12.2) return; const b = m.getBounds().toArray(), pad = .05;
         for (const d of DATA.designs) { if (this.towns[d.slug]) continue;
@@ -290,7 +292,8 @@ function threeLayer() {
               if (bb.max.y - bb.min.y < .6) flats.push([bb.max.y, (bb.max.x - bb.min.x) * (bb.max.z - bb.min.z), x]); });
             flats.sort((a, b) => a[0] - b[0] || b[1] - a[1]); let lv = -1, last = -1e9;
             for (const [y, , x] of flats) { if (y - last > .02 || true) lv++; last = y; x.material = x.material.clone(); x.material.polygonOffset = true; x.material.polygonOffsetFactor = -Math.min(lv, 20) * .5; x.material.polygonOffsetUnits = -Math.min(lv, 20) * 2; }
-            g.scene.traverse(x => { if (x.isMesh) { x.frustumCulled = false; const mt = x.material; if (!mt) return; if (mt.transparent) mt.depthWrite = false;
+            g.scene.traverse(x => { if (x.isMesh) { x.frustumCulled = false; const mt = x.material; if (!mt) return; if (mt.transparent) mt.depthWrite = false; if (mt.isMeshPhysicalMaterial && this.env) { mt.envMap = this.env; mt.envMapIntensity = 1; mt.needsUpdate = true; }
+              { const c = mt.color; if (c && c.r > .45 && c.g < .2 && c.b < .2) { mt.emissive = c.clone(); mt.emissiveIntensity = .45; mt.roughness = .35; } } // reel reds (Guntur chilli) lose their env light in glTF
               if (mt.map) { mt.polygonOffset = true; mt.polygonOffsetFactor = -6; mt.polygonOffsetUnits = -6; x.renderOrder = 2; } } });
             // each town gets its own scene + origin: keeps coordinates small so thin layers don't flicker (float precision)
             const sc = this.mkScene(); sc.add(g.scene);
