@@ -56,6 +56,8 @@ html,body{margin:0;height:100%;overflow:hidden;font-family:Poppins,system-ui,san
 .town.big{font-size:14px}.town.big i{background:var(--green)}
 body.zin .town{display:none}
 body.sheeton .town{display:none}
+.maplibregl-ctrl-bottom-right{bottom:calc(84px + var(--safe-b))}
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl-group{border:2px solid var(--navy);border-radius:12px;box-shadow:0 2.5px 0 var(--navy)}
 body.zfar .town.minor{display:none}
 body.zstate .town:not(.top){display:none}
 #pop{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(86px + var(--safe-b));width:min(380px,calc(100vw - 24px));padding:14px 16px;z-index:6;display:none}
@@ -127,7 +129,7 @@ let DATA, byId = new Map(), map, sel = null, DES = {};
 const toast = (m, ms = 2400) => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', ms); };
 const clean = s => (s || '').trim().replace(/^@+/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/[/?#].*$/, '').toLowerCase();
 
-const BUILD='11191244';fetch('data.json?v='+BUILD).then(r => r.json()).then(d => { DATA = d; d.houses.forEach(h => byId.set(h.id.toLowerCase(), h)); (d.designs || []).forEach(x => DES[x.d] = x); init(); })
+const BUILD='11191308';fetch('data.json?v='+BUILD).then(r => r.json()).then(d => { DATA = d; d.houses.forEach(h => byId.set(h.id.toLowerCase(), h)); (d.designs || []).forEach(x => DES[x.d] = x); init(); })
   .catch(() => { $('#load').textContent = 'Data load kaaledu. Refresh cheyandi 🙏'; });
 
 function init() {
@@ -136,6 +138,10 @@ function init() {
     maxPitch: 70, attributionControl: { compact: true }, dragRotate: true, hash: false, fadeDuration: 0 });
   map.touchZoomRotate.enableRotation(); window.__map = map;
   map.on('load', onLoad);
+  // compass: tap to face north again (trackpads can't rotate back easily)
+  map.addControl(new maplibregl.NavigationControl({ showZoom: false, showCompass: true, visualizePitch: true }), 'bottom-right');
+  // zoomed out to state/district view: always straighten the map
+  map.on('zoomend', () => { if (map.getZoom() < 10.5 && (Math.abs(map.getBearing()) > .5 || map.getPitch() > 1)) map.easeTo({ bearing: 0, pitch: 0, duration: 700 }); });
   map.on('error', e => console.warn(e && e.error));
 }
 
@@ -298,7 +304,7 @@ function threeLayer() {
             ground.sort((a, b) => a[0] - b[0] || a[1] - b[1] || b[2] - a[2]);
             ground.forEach(([, , , x], i) => { x.material = x.material.clone(); x.material.depthWrite = false; x.renderOrder = -100000 + i; });
             g.scene.traverse(x => { if (x.isMesh) { x.frustumCulled = false; const mt = x.material; if (!mt) return; if (mt.transparent) mt.depthWrite = false; if (mt.isMeshPhysicalMaterial && this.env) { mt.envMap = this.env; mt.envMapIntensity = 1; mt.needsUpdate = true; }
-              { const c = mt.color; if (c && c.r > .45 && c.g < .2 && c.b < .2) { mt.emissive = c.clone(); mt.emissiveIntensity = .45; mt.roughness = .35; } } // reel reds (Guntur chilli) lose their env light in glTF
+              { const c = mt.color; if (c && c.r > .45 && c.g < .2 && c.b < .2) { if (mt.isMeshPhysicalMaterial) { x.material = new THREE.MeshStandardMaterial({ color: c.clone(), emissive: c.clone(), emissiveIntensity: .55, roughness: .35, side: THREE.DoubleSide }); } else { mt.emissive = c.clone(); mt.emissiveIntensity = .45; mt.roughness = .35; } } } // reel reds (Guntur chilli) lose their env light in glTF
               if (mt.map && x.renderOrder >= 0) { mt.polygonOffset = true; mt.polygonOffsetFactor = -6; mt.polygonOffsetUnits = -6; x.renderOrder = 2; } } });
             // each town gets its own scene + origin: keeps coordinates small so thin layers don't flicker (float precision)
             const sc = this.mkScene(); sc.add(g.scene);
