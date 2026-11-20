@@ -9,9 +9,9 @@
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
-<link rel="preload" href="data.json?v=11201345" as="fetch" crossorigin>
-<link rel="modulepreload" href="lib/three-bundle.js?v=11201345">
-<link href="lib/maplibre-gl.css?v=11201345" rel="stylesheet">
+<link rel="preload" href="data.json?v=11201410" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11201410">
+<link href="lib/maplibre-gl.css?v=11201410" rel="stylesheet">
 <style>
 @font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
 @font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
@@ -117,9 +117,9 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="lib/maplibre-gl.js?v=11201345" defer></script>
+<script src="lib/maplibre-gl.js?v=11201410" defer></script>
 <script type="module">
-const BUILD='11201345';
+const BUILD='11201410';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
@@ -297,19 +297,6 @@ async function solve() {
 }
 
 // ---------- 3D houses (three.js custom layer, instanced) ----------
-// city expansion: a new street leaving the reel town edge (asphalt + white dashes + lamps), same colours as the reel roads
-function street(sc, [[ax, az], [bx, bz]]) {
-  const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz), ang = Math.atan2(dx, dz), cx = (ax + bx) / 2, cz = (az + bz) / 2;
-  const M = c => new THREE.MeshStandardMaterial({ color: c, roughness: .9 });
-  const put = (g, m, x, y, z) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.rotation.y = ang; o.frustumCulled = false; sc.add(o); return o; };
-  put(new THREE.BoxGeometry(13, .12, L), M(0xd9d2c3), cx, .06, cz);
-  put(new THREE.BoxGeometry(9, .16, L), M(0x4b4e57), cx, .1, cz);
-  const dm = M(0xf4f1e4), ux = dx / L, uz = dz / L;
-  for (let s = 3; s < L - 2; s += 7) put(new THREE.BoxGeometry(.35, .04, 3), dm, ax + ux * s, .2, az + uz * s);
-  const pole = M(0x5a5f6b), bulb = new THREE.MeshStandardMaterial({ color: 0xfff3c4, emissive: 0xffe9a0, emissiveIntensity: .6 });
-  for (let s = 10; s < L - 4; s += 22) for (const sd of [-1, 1]) { const px = ax + ux * s + uz * sd * 5.6, pz = az + uz * s - ux * sd * 5.6;
-    put(new THREE.CylinderGeometry(.15, .2, 5, 6), pole, px, 2.5, pz); put(new THREE.IcosahedronGeometry(.45, 0), bulb, px, 5.2, pz); }
-}
 // 4+ houses in one village: green lawn + low compound wall (gate in front) + corner trees
 function garden(sc, pts) {
   const xs = pts.map(p => p[0]), zs = pts.map(p => p[1]), P = 18;
@@ -353,9 +340,8 @@ function threeLayer() {
           const oc = maplibregl.MercatorCoordinate.fromLngLat([c.lng, c.lat], 0), ms = oc.meterInMercatorCoordinateUnits(), sc = mkScene();
           hs.forEach(h => { const mc = maplibregl.MercatorCoordinate.fromLngLat([h.lng, h.lat], 0); const k = V[(h.c * 7 + h.r) % V.length].clone();
             k.position.set((mc.x - oc.x) / ms, 0, (mc.y - oc.y) / ms); k.rotation.y = (h.r % 4) * Math.PI / 2; k.scale.setScalar(DATA.scale); sc.add(k); });
-          const ext = (DATA.clusters.find(c => c.t === t) || {}).ext;
-          if (ext) street(sc, ext.road.map(([lng, lat]) => { const mc = maplibregl.MercatorCoordinate.fromLngLat([lng, lat], 0); return [(mc.x - oc.x) / ms, (mc.y - oc.y) / ms]; }));
-          else if (hs.length >= 4) garden(sc, hs.map(h => { const mc = maplibregl.MercatorCoordinate.fromLngLat([h.lng, h.lat], 0); return [(mc.x - oc.x) / ms, (mc.y - oc.y) / ms]; }));
+          // new houses inside a reel city (t = HQ town) blend into the city: no garden there; villages with 4+ houses get one
+          if (hs.length >= 4 && !DATA.towns.some(x => x.t === t && x.hq)) garden(sc, hs.map(h => { const mc = maplibregl.MercatorCoordinate.fromLngLat([h.lng, h.lat], 0); return [(mc.x - oc.x) / ms, (mc.y - oc.y) / ms]; }));
           sc.traverse(x => { if (x.isMesh) x.frustumCulled = false; });
           this.towns['c:' + t] = { sc, mc: oc, ms }; }
         m.triggerRepaint(); });
