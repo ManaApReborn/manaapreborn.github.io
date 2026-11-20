@@ -19,7 +19,7 @@
 @font-face{font-family:Poppins;font-weight:800;font-display:swap;src:url(lib/fonts/poppins-latin-800-normal.woff2) format('woff2')}
 :root{--navy:#1a2444;--gold:#ffd84a;--green:#3fae4f;--cream:#fffaf0;--ink:#1a2444;--safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;overflow:hidden;font-family:Poppins,system-ui,sans-serif;color:var(--ink);background:#cfe8ef}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;font-family:Poppins,system-ui,sans-serif;color:var(--ink);background:#cfe8ef}
 #map{position:absolute;inset:0}
 .card{background:var(--cream);border:2.5px solid var(--navy);border-radius:18px;box-shadow:0 4px 0 var(--navy)}
 #top{position:absolute;left:12px;right:12px;top:calc(10px + var(--safe-t));display:flex;flex-direction:column;gap:8px;max-width:440px;z-index:5;pointer-events:none}
@@ -146,6 +146,17 @@ function init() {
   // Google Maps style: user turns / tilts / zooms freely (2 fingers on phone, right-drag or Ctrl+drag on PC).
   // No automatic snapping. + / − buttons, compass = tap to face north again.
   map.addControl(new maplibregl.NavigationControl({ showZoom: true, showCompass: true, visualizePitch: true }), 'bottom-right');
+  // PC / Mac trackpad (not phones: phones already rotate with 2 fingers):
+  // 2-finger swipe left/right = turn the map; Safari also gets the real 2-finger twist gesture.
+  if (matchMedia('(hover: hover) and (pointer: fine)').matches && !navigator.maxTouchPoints) {
+    const el = map.getCanvasContainer();
+    el.addEventListener('wheel', e => { if (e.ctrlKey) return;
+      if (Math.abs(e.deltaX) > 0.5 && Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.5) { e.preventDefault(); e.stopImmediatePropagation(); map.setBearing(map.getBearing() + e.deltaX * 0.3); } }, { capture: true, passive: false });
+    let g0 = null;
+    el.addEventListener('gesturestart', e => { e.preventDefault(); g0 = map.getBearing(); });
+    el.addEventListener('gesturechange', e => { e.preventDefault(); if (g0 !== null && Math.abs(e.rotation) > 2) map.setBearing(g0 - e.rotation); });
+    el.addEventListener('gestureend', e => { e.preventDefault(); g0 = null; });
+  }
   map.on('error', e => console.warn(e && e.error));
 }
 
