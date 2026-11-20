@@ -131,6 +131,9 @@ const ROOF = [0xd9542b, 0xe0782f, 0x2f7fbf, 0x3f9a6a, 0xb8483a, 0x7a5cc4];
 const WALL = [0xfff3dc, 0xf6e7c8, 0xffffff, 0xf1ede4, 0xfbe3d0, 0xe9f1f4];
 const $ = s => document.querySelector(s);
 let DATA, byId = new Map(), map, sel = null, DES = {};
+// PC / Mac only (phones untouched)
+const DESK = matchMedia('(hover: hover) and (pointer: fine)').matches && !navigator.maxTouchPoints;
+let autoTurned = false; // true while the map is turned by a town/house tap (not by the user)
 const toast = (m, ms = 2400) => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', ms); };
 const clean = s => (s || '').trim().replace(/^@+/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/[/?#].*$/, '').toLowerCase();
 
@@ -148,12 +151,16 @@ function init() {
   map.addControl(new maplibregl.NavigationControl({ showZoom: true, showCompass: true, visualizePitch: true }), 'bottom-right');
   // PC / Mac trackpad (not phones: phones already rotate with 2 fingers):
   // 2-finger swipe left/right = turn the map; Safari also gets the real 2-finger twist gesture.
-  if (matchMedia('(hover: hover) and (pointer: fine)').matches && !navigator.maxTouchPoints) {
+  if (DESK) {
+    // smart auto-north: map turned by a town/house tap -> zooming out (< 10.5) straightens it again.
+    // If the user turned it by hand, it stays where they put it.
+    map.on('rotatestart', e => { if (e.originalEvent) autoTurned = false; });
+    map.on('zoomend', e => { if (autoTurned && map.getZoom() < 10.5) { autoTurned = false; map.easeTo({ bearing: 0, pitch: 0, duration: 700 }); } });
     const el = map.getCanvasContainer();
     el.addEventListener('wheel', e => { if (e.ctrlKey) return;
-      if (Math.abs(e.deltaX) > 0.5 && Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.5) { e.preventDefault(); e.stopImmediatePropagation(); map.setBearing(map.getBearing() + e.deltaX * 0.3); } }, { capture: true, passive: false });
+      if (Math.abs(e.deltaX) > 0.5 && Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.5) { e.preventDefault(); e.stopImmediatePropagation(); autoTurned = false; map.setBearing(map.getBearing() + e.deltaX * 0.3); } }, { capture: true, passive: false });
     let g0 = null;
-    el.addEventListener('gesturestart', e => { e.preventDefault(); g0 = map.getBearing(); });
+    el.addEventListener('gesturestart', e => { e.preventDefault(); autoTurned = false; g0 = map.getBearing(); });
     el.addEventListener('gesturechange', e => { e.preventDefault(); if (g0 !== null && Math.abs(e.rotation) > 2) map.setBearing(g0 - e.rotation); });
     el.addEventListener('gestureend', e => { e.preventDefault(); g0 = null; });
   }
@@ -221,12 +228,13 @@ function pillImage() { const c = document.createElement('canvas'); c.width = 48;
   x.fillStyle = '#1a2444'; rr(x, 1, 3, 46, 40, 18); x.fill(); x.fillStyle = '#ffffff'; rr(x, 3.5, 1, 41, 38, 16); x.fill();
   x.lineWidth = 3; x.strokeStyle = '#1a2444'; rr(x, 3.5, 1, 41, 38, 16); x.stroke(); return x.getImageData(0, 0, 48, 44); }
 function rr(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
-function flyTown(t) { hidePop(); const ds = t.hq && DES[t.d]; map.flyTo({ center: [t.lng, t.lat], zoom: ds ? 16.4 : 17.2, pitch: 55, bearing: ds ? ds.bear : -18, duration: 2000 }); }
+function flyTown(t) { hidePop(); autoTurned = true; const ds = t.hq && DES[t.d]; map.flyTo({ center: [t.lng, t.lat], zoom: ds ? 16.4 : 17.2, pitch: 55, bearing: ds ? ds.bear : -18, duration: 2000 }); }
 
 function select(k, fly) {
   const h = byId.get(k); if (!h) return;
   sel = k;
   map.setFilter('house-ring', ['==', ['get', 'k'], k]); map.setFilter('house-sel', ['==', ['get', 'k'], k]);
+  if (fly) autoTurned = true;
   if (fly) map.flyTo({ center: [h.lng, h.lat], zoom: 18.2, pitch: 60, bearing: h.z && DES[h.d] ? DES[h.d].bear : -20, duration: 2600, essential: true });
   $('#popwho').textContent = '@' + h.id;
   $('#popwhere').textContent = `🏠 ${h.t} · ${h.d} district`;
