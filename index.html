@@ -9,9 +9,9 @@
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
-<link rel="preload" href="data.json?v=11201135" as="fetch" crossorigin>
-<link rel="modulepreload" href="lib/three-bundle.js?v=11201135">
-<link href="lib/maplibre-gl.css?v=11201135" rel="stylesheet">
+<link rel="preload" href="data.json?v=11201330" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11201330">
+<link href="lib/maplibre-gl.css?v=11201330" rel="stylesheet">
 <style>
 @font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
 @font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
@@ -117,9 +117,9 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="lib/maplibre-gl.js?v=11201135" defer></script>
+<script src="lib/maplibre-gl.js?v=11201330" defer></script>
 <script type="module">
-const BUILD='11201135';
+const BUILD='11201330';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
@@ -297,6 +297,25 @@ async function solve() {
 }
 
 // ---------- 3D houses (three.js custom layer, instanced) ----------
+// 5+ houses in one ooru/colony: green lawn + low compound wall (gate in front) + corner trees
+function garden(sc, pts) {
+  const xs = pts.map(p => p[0]), zs = pts.map(p => p[1]), P = 18;
+  const x0 = Math.min(...xs) - P, x1 = Math.max(...xs) + P, z0 = Math.min(...zs) - P, z1 = Math.max(...zs) + P, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, d = z1 - z0;
+  const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .9, flatShading: true, ...o });
+  const B = (bw, bh, bd, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), m); o.position.set(x, y, z); o.frustumCulled = false; sc.add(o); return o; };
+  const lawn = B(w, .3, d, M(0x7cc46a), cx, .15, cz); lawn.renderOrder = -1;
+  B(w - 6, .32, d - 6, M(0x8fd27a), cx, .17, cz);
+  const wall = M(0xf3e6cc), cap = M(0xc9764a), H = 2.4, T = .9, G = 10;
+  const seg = (sx, sz, len, alongX) => { B(alongX ? len : T, H, alongX ? T : len, wall, sx, H / 2, sz); B(alongX ? len + .2 : T + .3, .3, alongX ? T + .3 : len + .2, cap, sx, H + .15, sz); };
+  seg(cx, z0, w, true); seg(x0, cz, d, false); seg(x1, cz, d, false);
+  const half = (w - G) / 2; seg(x0 + half / 2, z1, half, true); seg(x1 - half / 2, z1, half, true);
+  for (const gx of [cx - G / 2, cx + G / 2]) { B(1.8, 4, 1.8, wall, gx, 2, z1); B(2.1, .5, 2.1, cap, gx, 4.2, z1); }
+  const trunk = M(0x8a5a3b), leaf = M(0x3f9a4f);
+  for (const [tx, tz] of [[x0 + 5, z0 + 5], [x1 - 5, z0 + 5], [x0 + 5, z1 - 5], [x1 - 5, z1 - 5]]) {
+    const t = new THREE.Mesh(new THREE.CylinderGeometry(.6, .8, 5, 7), trunk); t.position.set(tx, 2.5, tz); sc.add(t);
+    const l = new THREE.Mesh(new THREE.IcosahedronGeometry(4.2, 0), leaf); l.position.set(tx, 7.2, tz); sc.add(l); }
+}
+
 function threeLayer() {
   const o = maplibregl.MercatorCoordinate.fromLngLat([80.6, 16.0], 0); const s = o.meterInMercatorCoordinateUnits();
   return {
@@ -321,6 +340,7 @@ function threeLayer() {
           const oc = maplibregl.MercatorCoordinate.fromLngLat([c.lng, c.lat], 0), ms = oc.meterInMercatorCoordinateUnits(), sc = mkScene();
           hs.forEach(h => { const mc = maplibregl.MercatorCoordinate.fromLngLat([h.lng, h.lat], 0); const k = V[(h.c * 7 + h.r) % V.length].clone();
             k.position.set((mc.x - oc.x) / ms, 0, (mc.y - oc.y) / ms); k.rotation.y = (h.r % 4) * Math.PI / 2; k.scale.setScalar(DATA.scale); sc.add(k); });
+          if (hs.length >= 5) garden(sc, hs.map(h => { const mc = maplibregl.MercatorCoordinate.fromLngLat([h.lng, h.lat], 0); return [(mc.x - oc.x) / ms, (mc.y - oc.y) / ms]; }));
           sc.traverse(x => { if (x.isMesh) x.frustumCulled = false; });
           this.towns['c:' + t] = { sc, mc: oc, ms }; }
         m.triggerRepaint(); });
