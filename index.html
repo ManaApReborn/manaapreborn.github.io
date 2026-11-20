@@ -8,10 +8,15 @@
 <meta property="og:title" content="Mana AP Reborn · Mee illu ekkada?">
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
-<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
+<link rel="preload" href="data.json?v=11201135" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11201135">
+<link href="lib/maplibre-gl.css?v=11201135" rel="stylesheet">
 <style>
+@font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:Poppins;font-weight:700;font-display:swap;src:url(lib/fonts/poppins-latin-700-normal.woff2) format('woff2')}
+@font-face{font-family:Poppins;font-weight:800;font-display:swap;src:url(lib/fonts/poppins-latin-800-normal.woff2) format('woff2')}
 :root{--navy:#1a2444;--gold:#ffd84a;--green:#3fae4f;--cream:#fffaf0;--ink:#1a2444;--safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;overflow:hidden;font-family:Poppins,system-ui,sans-serif;color:var(--ink);background:#cfe8ef}
@@ -85,7 +90,7 @@ body.zstate .town:not(.top){display:none}
   <form id="search" class="card" autocomplete="off">
     <span aria-hidden="true">🔍</span>
     <input id="q" type="search" placeholder="Mee Instagram ID type cheyandi" spellcheck="false" autocapitalize="none" aria-label="Instagram ID">
-    <button type="submit">Vethuku</button>
+    <button type="submit">Search</button>
     <div id="sugg" class="card"></div>
   </form>
 </div>
@@ -112,13 +117,13 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<script src="lib/maplibre-gl.js?v=11201135" defer></script>
 <script type="module">
-import * as THREE from 'three';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
-import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+const BUILD='11201135';
+// 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
+let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
+const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 {
 const STYLE = window.MAP_STYLE || 'https://tiles.openfreemap.org/styles/liberty';
 const AP_BOUNDS = [[76.75, 12.6], [84.8, 19.25]];
@@ -129,7 +134,7 @@ let DATA, byId = new Map(), map, sel = null, DES = {};
 const toast = (m, ms = 2400) => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', ms); };
 const clean = s => (s || '').trim().replace(/^@+/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/[/?#].*$/, '').toLowerCase();
 
-const BUILD='11191317';fetch('data.json?v='+BUILD).then(r => r.json()).then(d => { DATA = d; d.houses.forEach(h => byId.set(h.id.toLowerCase(), h)); (d.designs || []).forEach(x => DES[x.d] = x); init(); })
+fetch('data.json?v='+BUILD).then(r => r.json()).then(d => { DATA = d; d.houses.forEach(h => byId.set(h.id.toLowerCase(), h)); (d.designs || []).forEach(x => DES[x.d] = x); init(); })
   .catch(() => { $('#load').textContent = 'Data load kaaledu. Refresh cheyandi 🙏'; });
 
 function init() {
@@ -138,17 +143,9 @@ function init() {
     maxPitch: 70, attributionControl: { compact: true }, dragRotate: true, hash: false, fadeDuration: 0 });
   map.touchZoomRotate.enableRotation(); window.__map = map;
   map.on('load', onLoad);
-  // compass: tap to face north again (trackpads can't rotate back easily)
-  map.addControl(new maplibregl.NavigationControl({ showZoom: false, showCompass: true, visualizePitch: true }), 'bottom-right');
-  // zoomed out to state/district view: always straighten the map
-  // zooming into a reel town by hand: turn to the town's front (reel view), like the reel camera
-  let zPrev = map.getZoom();
-  map.on('zoomstart', () => { zPrev = map.getZoom(); });
-  map.on('zoomend', () => { const z = map.getZoom();
-    if (z < 10.5 && (Math.abs(map.getBearing()) > .5 || map.getPitch() > 1)) map.easeTo({ bearing: 0, pitch: 0, duration: 700 });
-    else if (zPrev < 14.5 && z >= 14.5 && DATA) { const c = map.getCenter(); let best = null, bd = 1e9;
-      for (const d of DATA.designs) { const dm = Math.hypot((d.lng - c.lng) * 111320 * Math.cos(d.lat * Math.PI / 180), (d.lat - c.lat) * 110574); if (dm < bd) { bd = dm; best = d; } }
-      if (best && bd < best.R * 2.5 && Math.abs(((map.getBearing() - best.bear + 540) % 360) - 180) > 15) map.easeTo({ bearing: best.bear, pitch: Math.max(map.getPitch(), 50), duration: 900 }); } });
+  // Google Maps style: user turns / tilts / zooms freely (2 fingers on phone, right-drag or Ctrl+drag on PC).
+  // No automatic snapping. + / − buttons, compass = tap to face north again.
+  map.addControl(new maplibregl.NavigationControl({ showZoom: true, showCompass: true, visualizePitch: true }), 'bottom-right');
   map.on('error', e => console.warn(e && e.error));
 }
 
@@ -160,8 +157,19 @@ function onLoad() {
     if ((/poi|housenumber|aeroway_label/.test(l.id) && l.type === 'symbol') || l.type === 'fill-extrusion') map.setLayoutProperty(l.id, 'visibility', 'none');
   }
   map.addSource('houses', { type: 'geojson', data: geo(DATA.houses, h => ({ id: h.id, t: h.t, d: h.d, k: h.id.toLowerCase() })) });
+  // blue dots: every ooru with houses gets a dot (size = houses), so even 1-2 house villages are visible zoomed out
+  const tg = {}; DATA.houses.forEach(h => { const g = tg[h.t] = tg[h.t] || { t: h.t, d: h.d, n: 0, lat: 0, lng: 0 }; g.n++; g.lat += h.lat; g.lng += h.lng; });
+  const TD = Object.values(tg).map(g => ({ ...g, lat: g.lat / g.n, lng: g.lng / g.n }));
+  map.addSource('tdots', { type: 'geojson', data: geo(TD, g => ({ t: g.t, n: g.n })) });
+  map.addLayer({ id: 'town-dot', type: 'circle', source: 'tdots', maxzoom: 15,
+    paint: { 'circle-color': '#2f6fd0', 'circle-stroke-color': '#ffffff',
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, ['interpolate', ['linear'], ['sqrt', ['get', 'n']], 1, 3, 8, 11], 9, ['interpolate', ['linear'], ['sqrt', ['get', 'n']], 1, 5, 8, 18], 13, ['interpolate', ['linear'], ['sqrt', ['get', 'n']], 1, 9, 8, 28]],
+      'circle-opacity': ['interpolate', ['linear'], ['zoom'], 12.5, .62, 14.8, 0], 'circle-stroke-width': 1.5, 'circle-stroke-opacity': ['interpolate', ['linear'], ['zoom'], 12.5, .9, 14.8, 0] } });
+  map.on('click', 'town-dot', e => { const f = e.features[0]; if (!f || map.getZoom() > 13.5) return; const t = DATA.towns.find(x => x.t === f.properties.t) || TD.find(x => x.t === f.properties.t); if (t) flyTown(t); });
+  map.on('mouseenter', 'town-dot', () => map.getCanvas().style.cursor = 'pointer');
+  map.on('mouseleave', 'town-dot', () => map.getCanvas().style.cursor = '');
   map.addLayer({ id: 'house-hit', type: 'circle', source: 'houses', paint: { 'circle-radius': ['interpolate', ['exponential', 2], ['zoom'], 12, 3, 17, 18, 20, 120], 'circle-opacity': 0 } });
-  map.addLayer(threeLayer());
+  threeReady.then(() => map.addLayer(threeLayer(), 'house-ring')).catch(e => console.warn('3D load failed', e));
   map.addLayer({ id: 'house-ring', type: 'circle', source: 'houses', filter: ['==', ['get', 'k'], ''],
     paint: { 'circle-radius': 26, 'circle-color': '#ffd84a', 'circle-opacity': .25, 'circle-stroke-color': '#ffd84a', 'circle-stroke-width': 3, 'circle-pitch-alignment': 'map' } });
   map.addImage('pill', pillImage(), { pixelRatio: 2, stretchX: [[22, 26]], stretchY: [[20, 24]], content: [12, 8, 36, 36] });
@@ -282,7 +290,12 @@ function threeLayer() {
       this.loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder); this.towns = {};
       const mkScene = () => { const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff, 0x8a9a7a, 1.25)); const sn = new THREE.DirectionalLight(0xffffff, 1.6); sn.position.set(-40, 90, 60); sc.add(sn); return sc; };
       this.mkScene = mkScene;
-      this.loader.load('towns/houses.glb?v='+BUILD, g => {
+      this.loader.loadZ = (slug, ok, prog, fail) => {
+        const plain = () => this.loader.load('towns/' + slug + '.glb?v=' + BUILD, ok, prog, fail);
+        if (typeof DecompressionStream === 'undefined') return plain();
+        fetch('towns/' + slug + '.glbz?v=' + BUILD).then(r => { if (!r.ok) throw 0; return new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer(); })
+          .then(buf => this.loader.parse(buf, '', ok, fail)).catch(plain); };
+      this.loader.loadZ('houses', g => {
         const V = g.scene.children.slice(), groups = {};
         DATA.houses.filter(h => !h.z).forEach(h => (groups[h.t] = groups[h.t] || []).push(h));
         for (const t in groups) { const hs = groups[t], c = hs[0];
@@ -299,7 +312,7 @@ function threeLayer() {
         for (const d of DATA.designs) { if (this.towns[d.slug]) continue;
           if (d.lng < b[0][0] - pad || d.lng > b[1][0] + pad || d.lat < b[0][1] - pad || d.lat > b[1][1] + pad) continue;
           this.towns[d.slug] = 'loading';
-          this.loader.load('towns/' + d.slug + '.glb?v=' + BUILD, g => { const mc = maplibregl.MercatorCoordinate.fromLngLat([d.lng, d.lat], 0);
+          this.loader.loadZ(d.slug, g => { const mc = maplibregl.MercatorCoordinate.fromLngLat([d.lng, d.lat], 0);
             g.scene.scale.setScalar(DATA.scale);
             const flats = []; g.scene.updateMatrixWorld(true);
             g.scene.traverse(x => { if (!x.isMesh) return; x.geometry.computeBoundingBox(); const bb = x.geometry.boundingBox.clone().applyMatrix4(x.matrixWorld);
