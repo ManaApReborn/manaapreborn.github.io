@@ -9,9 +9,9 @@
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
-<link rel="preload" href="data.json?v=11221800" as="fetch" crossorigin>
-<link rel="modulepreload" href="lib/three-bundle.js?v=11221800">
-<link href="lib/maplibre-gl.css?v=11221800" rel="stylesheet">
+<link rel="preload" href="data.json?v=11222100" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11222100">
+<link href="lib/maplibre-gl.css?v=11222100" rel="stylesheet">
 <style>
 @font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
 @font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
@@ -117,9 +117,9 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="lib/maplibre-gl.js?v=11221800" defer></script>
+<script src="lib/maplibre-gl.js?v=11222100" defer></script>
 <script type="module">
-const BUILD='11221800';
+const BUILD='11222100';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
@@ -312,21 +312,24 @@ function addFloors(k, f) {
 // extra floors on a house baked into a reel town: hide its baked roof and stand a reel-house clone (with the extra storeys) on the same spot
 const FQ = []; let HV = null;
 function bakedFloors(root, x, z, f, id) {
-  let best = null, bd = 1e9;
-  root.traverse(m => { if (!m.isMesh) return; m.geometry.computeBoundingBox(); const b = m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld);
-    const cx = (b.min.x + b.max.x) / 2, cz = (b.min.z + b.max.z) / 2, w = b.max.x - b.min.x, dd = Math.hypot(cx - x, cz - z);
-    if (dd < 3 && b.min.y > 3 && w > 5 && w < 30 && dd < bd) { bd = dd; best = m; } });
-  if (!best) return false;
-  const me = best.matrixWorld.elements, yaw = Math.atan2(me[8], me[10]);
-  const lb = best.geometry.boundingBox, ws = best.getWorldScale(new THREE.Vector3()), rw = Math.max((lb.max.x - lb.min.x) * ws.x, (lb.max.z - lb.min.z) * ws.z);
-  best.visible = false;
-  FQ.push({ root, x, z, f, id, yaw, rw }); runFQ(); return true;
+  // remove the baked house itself (walls, windows, door, chimney, roof) so a clean 2-storey reel house can stand in its place
+  root.updateMatrixWorld(true);
+  const M = new THREE.Matrix4(), Z = new THREE.Matrix4().makeScale(0, 0, 0), c = new THREE.Vector3(); let door = null, hidden = 0;
+  root.traverse(m => { if (!m.isMesh) return; m.geometry.computeBoundingBox(); const gb = m.geometry.boundingBox;
+    const test = mw => { const b = gb.clone().applyMatrix4(mw); b.getCenter(c); const d = Math.hypot(c.x - x, c.z - z), h = b.max.y - b.min.y;
+      if (d < 5.4 && b.max.y > 1.5) { const w = Math.min(b.max.x - b.min.x, b.max.z - b.min.z); if (b.min.y < .2 && h > 2.4 && h < 3.6 && w < .5) door = [c.x - x, c.z - z]; return true; }
+      if (d < 8 && b.min.y > 3 && (b.max.x - b.min.x) > 5) return true; return false; };
+    if (m.isInstancedMesh) { let ch = false; for (let i = 0; i < m.count; i++) { m.getMatrixAt(i, M); if (test(M.clone().premultiply(m.matrixWorld))) { m.setMatrixAt(i, Z); ch = true; hidden++; } } if (ch) m.instanceMatrix.needsUpdate = true; }
+    else if (test(m.matrixWorld)) { m.visible = false; hidden++; } });
+  if (!hidden) return false;
+  let yaw = 0; if (door) yaw = Math.round(Math.atan2(door[0], door[1]) / (Math.PI / 2)) * (Math.PI / 2);
+  FQ.push({ root, x, z, f, id, yaw, rw: 0 }); runFQ(); return true;
 }
 function runFQ() {
   if (!HV) return;
   while (FQ.length) { const o = FQ.shift(), rs = o.root.scale.x || 1;
     const k = HV[[...o.id].reduce((a, c) => a + c.charCodeAt(0), 0) % HV.length].clone(true);
-    const sw = 1.6 * Math.max(1, o.rw / 11.2) * 1.04;   // world scale that covers the baked walls completely
+    const sw = 1.6 * 1.06;   // reel-house size, a touch bigger than the removed baked house
     k.scale.setScalar(sw); k.rotation.y = o.yaw; k.position.set(0, 0, 0);
     const parts = addFloors(k, o.f);
     k.position.set(o.x / rs, 0, o.z / rs); k.scale.setScalar(sw / rs); k.traverse(m => { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; } });
