@@ -9,9 +9,9 @@
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
-<link rel="preload" href="data.json?v=11230930" as="fetch" crossorigin>
-<link rel="modulepreload" href="lib/three-bundle.js?v=11230930">
-<link href="lib/maplibre-gl.css?v=11230930" rel="stylesheet">
+<link rel="preload" href="data.json?v=11231500" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11231500">
+<link href="lib/maplibre-gl.css?v=11231500" rel="stylesheet">
 <style>
 @font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
 @font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
@@ -117,9 +117,9 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="lib/maplibre-gl.js?v=11230930" defer></script>
+<script src="lib/maplibre-gl.js?v=11231500" defer></script>
 <script type="module">
-const BUILD='11230930';
+const BUILD='11231500';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
