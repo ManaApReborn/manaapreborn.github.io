@@ -119,11 +119,11 @@ body.zstate .town:not(.top){display:none}
 </div>
 <script src="lib/maplibre-gl.js?v=11231500" defer></script>
 <script type="module">
-const BUILD='11231500';
+const BUILD='11241600';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js?v=2', { updateViaCache: 'none' }).catch(() => {});
 {
 const STYLE = window.MAP_STYLE || 'https://tiles.openfreemap.org/styles/liberty';
 const AP_BOUNDS = [[76.75, 12.6], [84.8, 19.25]];
@@ -137,7 +137,7 @@ let autoTurned = false; // true while the map is turned by a town/house tap (not
 const toast = (m, ms = 2400) => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', ms); };
 const clean = s => (s || '').trim().replace(/^@+/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/[/?#].*$/, '').toLowerCase();
 
-fetch('data.json?v='+BUILD).then(r => r.json()).then(d => { DATA = d; d.houses.forEach(h => byId.set(h.id.toLowerCase(), h)); (d.designs || []).forEach(x => DES[x.d] = x); init(); })
+fetch('data.json?v='+BUILD+'&t='+Date.now(), { cache: 'no-store' }).then(r => r.json()).then(d => { DATA = d; d.houses.forEach(h => byId.set(h.id.toLowerCase(), h)); (d.designs || []).forEach(x => DES[x.d] = x); init(); })
   .catch(() => { $('#load').textContent = 'Data load kaaledu. Refresh cheyandi 🙏'; });
 
 function init() {
