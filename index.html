@@ -9,9 +9,9 @@
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
-<link rel="preload" href="data.json?v=11251700" as="fetch" crossorigin>
-<link rel="modulepreload" href="lib/three-bundle.js?v=11251700">
-<link href="lib/maplibre-gl.css?v=11251700" rel="stylesheet">
+<link rel="preload" href="data.json?v=11251800" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11251800">
+<link href="lib/maplibre-gl.css?v=11251800" rel="stylesheet">
 <style>
 @font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
 @font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
@@ -118,9 +118,9 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="lib/maplibre-gl.js?v=11251700" defer></script>
+<script src="lib/maplibre-gl.js?v=11251800" defer></script>
 <script type="module">
-const BUILD='11251700';
+const BUILD='11251800';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
@@ -464,16 +464,17 @@ function threeLayer() {
             this.towns[d.slug] = { sc, mc, ms: mc.meterInMercatorCoordinateUnits() }; m.triggerRepaint(); }, undefined, () => { this.towns[d.slug] = null; }); } };
       m.on('moveend', check); check();
       // landmarks (AP Reborn Hall, Amaravati): metre-scale GLB; district boards are painted live from DATA
-      const paintBoard = (mat, dist, tmpl) => { const c = document.createElement('canvas'); c.width = 1600; c.height = 1100; const g = c.getContext('2d');
+      const paintBoard = (mat, dist, tmpl) => { const CW = 1024, CH = 2210, c = document.createElement('canvas'); c.width = CW; c.height = CH; const g = c.getContext('2d');
         const hs = DATA.houses.filter(x => x.d === dist), gold = hs.filter(x => x.dx).map(x => x.id).sort(), ids = hs.filter(x => !x.dx).map(x => x.id).sort((a, b) => a.toLowerCase() < b.toLowerCase() ? -1 : 1);
         const fit = (t, max, s, w) => { g.font = `${w} ${s}px Poppins`; while (g.measureText(t).width > max && s > 10) { s--; g.font = `${w} ${s}px Poppins`; } return s; };
-        g.fillStyle = '#0e1b3d'; g.fillRect(0, 0, 1600, 1100); g.strokeStyle = '#ffd23f'; g.lineWidth = 16; g.strokeRect(14, 14, 1572, 1072); g.fillStyle = '#ffd23f'; g.fillRect(14, 14, 1572, 150);
-        g.fillStyle = '#0e1b3d'; g.textAlign = 'center'; g.textBaseline = 'middle'; fit(dist.toUpperCase(), 1240, 86, 800); g.fillText(dist.toUpperCase(), 730, 92); g.font = '800 54px Poppins'; g.textAlign = 'right'; g.fillText('· ' + hs.length, 1540, 94);
+        g.fillStyle = '#0e1b3d'; g.fillRect(0, 0, CW, CH); g.strokeStyle = '#ffd23f'; g.lineWidth = 14; g.strokeRect(10, 10, CW - 20, CH - 20); g.fillStyle = '#ffd23f'; g.fillRect(10, 10, CW - 20, 200);
+        g.fillStyle = '#0e1b3d'; g.textAlign = 'center'; g.textBaseline = 'middle'; fit(dist.toUpperCase(), CW - 90, 92, 800); g.fillText(dist.toUpperCase(), CW / 2, 82); g.font = '800 52px Poppins'; g.fillText(hs.length + (hs.length === 1 ? ' PERU' : ' PERLU'), CW / 2, 160);
         const names = [...gold.map(x => [x, 1]), ...ids.map(x => [x, 0])], n = names.length;
-        if (!n) { g.textAlign = 'center'; g.font = '700 64px Poppins'; g.fillStyle = 'rgba(255,255,255,.55)'; g.fillText('MEE PERU IKKADA? ✨', 800, 300); g.setLineDash([22, 16]); g.lineWidth = 5; g.strokeStyle = 'rgba(255,255,255,.35)'; for (let i = 0; i < 5; i++) { g.beginPath(); g.moveTo(240, 420 + i * 130); g.lineTo(1360, 420 + i * 130); g.stroke(); } }
-        else { const rowsMax = n > 100 ? 26 : n > 60 ? 22 : n > 30 ? 16 : 12, cols = Math.max(2, Math.ceil(n / rowsMax)), rows = Math.ceil(n / cols), cw = 1480 / cols, lh = Math.min(70, 850 / rows), fs = Math.min(46, lh * .74);
-          g.textAlign = 'left'; names.forEach(([id, gd], i) => { const x = 70 + Math.floor(i / rows) * cw, y = 200 + (i % rows) * lh + lh / 2, s = fit('@' + id, cw - 26, fs, gd ? 800 : 600);
-            if (gd) { g.fillStyle = 'rgba(255,210,63,.18)'; g.fillRect(x - 8, y - lh / 2 + 3, cw - 8, lh - 6); g.fillStyle = '#ffd23f'; } else g.fillStyle = 'rgba(255,255,255,.92)'; g.fillText('@' + id, x, y); }); }
+        if (!n) { g.setLineDash([22, 16]); g.lineWidth = 5; g.strokeStyle = 'rgba(255,255,255,.35)'; for (let i = 0; i < 12; i++) { g.beginPath(); g.moveTo(140, 420 + i * 150); g.lineTo(CW - 140, 420 + i * 150); g.stroke(); }
+          g.setLineDash([]); fit('MEE PERU IKKADA? ✨', CW - 120, 68, 800); g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText('MEE PERU IKKADA? ✨', CW / 2, 330); }
+        else { const cols = n > 80 ? 3 : n > 26 ? 2 : 1, rows = Math.ceil(n / cols), cw = (CW - 100) / cols, lh = Math.min(76, (CH - 310) / rows), fs = Math.min(46, lh * .72);
+          g.textAlign = 'left'; names.forEach(([id, gd], i) => { const x = 58 + Math.floor(i / rows) * cw, y = 250 + (i % rows) * lh + lh / 2, s = fit('@' + id, cw - 22, fs, gd ? 800 : 600);
+            if (gd) { g.fillStyle = 'rgba(255,210,63,.18)'; g.fillRect(x - 6, y - lh / 2 + 3, cw - 8, lh - 6); g.fillStyle = '#ffd23f'; } else g.fillStyle = 'rgba(255,255,255,.93)'; g.fillText('@' + id, x, y); }); }
         const tx = tmpl.clone(); tx.source = new tx.source.constructor(c); tx.needsUpdate = true; mat.map = tx; mat.color.setRGB(1, 1, 1); mat.needsUpdate = true; };
       const checkL = () => { if (m.getZoom() < 12.2) return; const b = m.getBounds().toArray(), pad = .05;
         for (const L of (DATA.landmarks || [])) { if (this.towns[L.slug]) continue;
