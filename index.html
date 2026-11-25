@@ -9,9 +9,9 @@
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
-<link rel="preload" href="data.json?v=11251200" as="fetch" crossorigin>
-<link rel="modulepreload" href="lib/three-bundle.js?v=11251200">
-<link href="lib/maplibre-gl.css?v=11251200" rel="stylesheet">
+<link rel="preload" href="data.json?v=11251540" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11251540">
+<link href="lib/maplibre-gl.css?v=11251540" rel="stylesheet">
 <style>
 @font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
 @font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
@@ -117,9 +117,9 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="lib/maplibre-gl.js?v=11251200" defer></script>
+<script src="lib/maplibre-gl.js?v=11251540" defer></script>
 <script type="module">
-const BUILD='11251200';
+const BUILD='11251540';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
@@ -309,6 +309,26 @@ function addFloors(k, f) {
   const rf = roof.map(r => [r, r.position.y]); for (const r of roof) r.position.y += H * f;
   return { up, rf, H: H * f };
 }
+// Day 8 TOP 50 winners: the reel's duplex (towns/duplex.glb: compound wall, gate, pool, palms, red SUV), name plate = their ID
+let DXT = null; const DXS = 1;
+function makeDuplex(h) {
+  const k = DXT.clone(true); k.scale.setScalar(DXS);
+  k.traverse(o => { if (!o.isMesh || !o.material || !o.material.map) return; o.geometry.computeBoundingBox(); const b = o.geometry.boundingBox; if (b.max.x - b.min.x < 2) return;
+    const c = document.createElement('canvas'); c.width = 512; c.height = 160; const g = c.getContext('2d');
+    g.fillStyle = '#0e1b3d'; g.fillRect(0, 0, 512, 160); g.strokeStyle = '#ffd23f'; g.lineWidth = 10; g.strokeRect(8, 8, 496, 144);
+    const t = '@' + h.id; let fs = 64; g.font = `bold ${fs}px Poppins, sans-serif`; while (g.measureText(t).width > 460 && fs > 22) { fs -= 2; g.font = `bold ${fs}px Poppins, sans-serif`; }
+    g.fillStyle = '#ffd23f'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t, 256, 84);
+    const tx = o.material.map.clone(); tx.source = new tx.source.constructor(c); /* clone() shares Source: give each plate its own */ tx.flipY = true; tx.needsUpdate = true; o.material = o.material.clone(); o.material.map = tx; });
+  return k;
+}
+// city growth step 4: extra streets next to a reel town (design.ext = [[x1, z1, x2, z2, width]], metres)
+function extRoads(root, ext, s) {
+  const road = new THREE.MeshStandardMaterial({ color: 0x4b4e57, roughness: .95 }), dash = new THREE.MeshStandardMaterial({ color: 0xf4f1e4 }), walk = new THREE.MeshStandardMaterial({ color: 0xd9d2c0, roughness: .95 });
+  for (const [x1, z1, x2, z2, w] of ext) { const L = Math.hypot(x2 - x1, z2 - z1), a = Math.atan2(x2 - x1, z2 - z1), cx = (x1 + x2) / 2, cz = (z1 + z2) / 2;
+    const add = (geo, m, y, ox = 0) => { const o = new THREE.Mesh(geo, m); o.rotation.y = a; o.position.set((cx + ox * Math.cos(a)) / s, y / s, (cz - ox * Math.sin(a)) / s); o.scale.setScalar(1 / s); root.add(o); return o; };
+    add(new THREE.BoxGeometry(w + 3, .08, L + 3), walk, .03); add(new THREE.BoxGeometry(w, .1, L), road, .05);
+    for (let d = -L / 2 + 3; d < L / 2 - 2; d += 8) { const o = new THREE.Mesh(new THREE.BoxGeometry(.35, .11, 4), dash); o.rotation.y = a; o.position.set((cx + d * Math.sin(a)) / s, .06 / s, (cz + d * Math.cos(a)) / s); o.scale.setScalar(1 / s); root.add(o); } }
+}
 // Day 8 TOP 50 winners (h.dx): duplex = 2 storeys + a car parked beside the house
 let CARM = null;
 function addCar(k) {
@@ -399,18 +419,19 @@ function threeLayer() {
         if (typeof DecompressionStream === 'undefined') return plain();
         fetch('towns/' + slug + '.glbz?v=' + BUILD).then(r => { if (!r.ok) throw 0; return new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer(); })
           .then(buf => this.loader.parse(buf, '', ok, fail)).catch(plain); };
-      this.loader.loadZ('houses', g => {
+      const loadHouses = () => this.loader.loadZ('houses', g => {
         const V = g.scene.children.slice(), groups = {}; HV = V; runFQ();
         DATA.houses.filter(h => !h.z).forEach(h => (groups[h.t] = groups[h.t] || []).push(h));
         for (const t in groups) { const hs = groups[t], c = hs[0];
           const oc = maplibregl.MercatorCoordinate.fromLngLat([c.lng, c.lat], 0), ms = oc.meterInMercatorCoordinateUnits(), sc = mkScene();
-          hs.forEach(h => { const mc = maplibregl.MercatorCoordinate.fromLngLat([h.lng, h.lat], 0); const k = V[(h.c * 7 + h.r) % V.length].clone();
-            k.position.set((mc.x - oc.x) / ms, 0, (mc.y - oc.y) / ms); k.rotation.y = h.y !== undefined ? h.y : (h.r % 4) * Math.PI / 2; k.scale.setScalar(DATA.scale); if (h.f || h.dx) addFloors(k, Math.max(h.f || 0, h.dx ? 1 : 0)); if (h.dx) addCar(k); sc.add(k); });
+          hs.forEach(h => { const mc = maplibregl.MercatorCoordinate.fromLngLat([h.lng, h.lat], 0); const k = h.dx && DXT ? makeDuplex(h) : V[(h.c * 7 + h.r) % V.length].clone();
+            k.position.set((mc.x - oc.x) / ms, 0, (mc.y - oc.y) / ms); k.rotation.y = h.y !== undefined ? h.y : (h.r % 4) * Math.PI / 2; if (!(h.dx && DXT)) { k.scale.setScalar(DATA.scale); if (h.f) addFloors(k, h.f); } sc.add(k); });
           // new houses inside a reel city (t = HQ town) blend into the city: no garden there; villages with 4+ houses get one
-          if (hs.length >= 4 && !DATA.towns.some(x => x.t === t && x.hq)) garden(sc, hs.map(h => { const mc = maplibregl.MercatorCoordinate.fromLngLat([h.lng, h.lat], 0); return [(mc.x - oc.x) / ms, (mc.y - oc.y) / ms]; }));
+          if (hs.length >= 4 && !DATA.towns.some(x => x.t === t && x.hq)) garden(sc, hs.flatMap(h => { const mc = maplibregl.MercatorCoordinate.fromLngLat([h.lng, h.lat], 0), px = (mc.x - oc.x) / ms, pz = (mc.y - oc.y) / ms; return h.dx ? [[px - 5, pz - 3], [px + 5, pz - 3], [px - 5, pz + 3], [px + 5, pz + 3]] : [[px, pz]]; }));
           sc.traverse(x => { if (x.isMesh) x.frustumCulled = false; });
           this.towns['c:' + t] = { sc, mc: oc, ms }; }
         m.triggerRepaint(); });
+      this.loader.loadZ('duplex', dg => { DXT = dg.scene; loadHouses(); }, undefined, () => loadHouses());
       this.renderer = new THREE.WebGLRenderer({ canvas: m.getCanvas(), context: gl, antialias: true }); this.renderer.autoClear = false;
       try { this.env = new THREE.PMREMGenerator(this.renderer).fromScene(new RoomEnvironment(), .04).texture; } catch (e) { this.env = null; }
       // reel-style district towns, loaded only when the camera comes close
@@ -421,7 +442,7 @@ function threeLayer() {
           this.loader.loadZ(d.slug, g => { const mc = maplibregl.MercatorCoordinate.fromLngLat([d.lng, d.lat], 0);
             g.scene.scale.setScalar(DATA.scale);
             const flats = []; g.scene.updateMatrixWorld(true);
-            { if (d.pk) clearParks(g.scene, d.pk, d.box); const kx = 111320 * Math.cos(d.lat * Math.PI / 180); for (const h of DATA.houses) if (h.z && (h.f || h.dx) && h.d === d.d) bakedFloors(g.scene, (h.lng - d.lng) * kx, (d.lat - h.lat) * 110574, Math.max(h.f || 0, h.dx ? 1 : 0), h.id, h.dx); g.scene.updateMatrixWorld(true); }
+            { if (d.pk) clearParks(g.scene, d.pk, d.box); if (d.ext) { extRoads(g.scene, d.ext, DATA.scale); g.scene.updateMatrixWorld(true); } const kx = 111320 * Math.cos(d.lat * Math.PI / 180); for (const h of DATA.houses) if (h.z && (h.f || h.dx) && h.d === d.d) bakedFloors(g.scene, (h.lng - d.lng) * kx, (d.lat - h.lat) * 110574, Math.max(h.f || 0, h.dx ? 1 : 0), h.id, h.dx); g.scene.updateMatrixWorld(true); }
             g.scene.traverse(x => { if (!x.isMesh) return; x.geometry.computeBoundingBox(); const bb = x.geometry.boundingBox.clone().applyMatrix4(x.matrixWorld);
               if (bb.max.y - bb.min.y < .6) flats.push([bb.max.y, (bb.max.x - bb.min.x) * (bb.max.z - bb.min.z), x]); });
             // ground layers (grass, sand, water, walks, roads, dashes) are painted bottom-up instead of depth-tested against each other:
