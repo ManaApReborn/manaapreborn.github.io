@@ -9,9 +9,9 @@
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
-<link rel="preload" href="data.json?v=11251800" as="fetch" crossorigin>
-<link rel="modulepreload" href="lib/three-bundle.js?v=11251800">
-<link href="lib/maplibre-gl.css?v=11251800" rel="stylesheet">
+<link rel="preload" href="data.json?v=11252130" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11252130">
+<link href="lib/maplibre-gl.css?v=11252130" rel="stylesheet">
 <style>
 @font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
 @font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
@@ -118,9 +118,9 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="lib/maplibre-gl.js?v=11251800" defer></script>
+<script src="lib/maplibre-gl.js?v=11252130" defer></script>
 <script type="module">
-const BUILD='11251800';
+const BUILD='11252130';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
@@ -464,7 +464,7 @@ function threeLayer() {
             this.towns[d.slug] = { sc, mc, ms: mc.meterInMercatorCoordinateUnits() }; m.triggerRepaint(); }, undefined, () => { this.towns[d.slug] = null; }); } };
       m.on('moveend', check); check();
       // landmarks (AP Reborn Hall, Amaravati): metre-scale GLB; district boards are painted live from DATA
-      const paintBoard = (mat, dist, tmpl) => { const CW = 1024, CH = 2210, c = document.createElement('canvas'); c.width = CW; c.height = CH; const g = c.getContext('2d');
+      const paintBoard = (mat, dist, tmpl) => { const CW = 1024, CH = 2210, c = document.createElement('canvas'); c.width = 640; c.height = 1381; const g = c.getContext('2d'); g.scale(640 / CW, 1381 / CH);
         const hs = DATA.houses.filter(x => x.d === dist), gold = hs.filter(x => x.dx).map(x => x.id).sort(), ids = hs.filter(x => !x.dx).map(x => x.id).sort((a, b) => a.toLowerCase() < b.toLowerCase() ? -1 : 1);
         const fit = (t, max, s, w) => { g.font = `${w} ${s}px Poppins`; while (g.measureText(t).width > max && s > 10) { s--; g.font = `${w} ${s}px Poppins`; } return s; };
         g.fillStyle = '#0e1b3d'; g.fillRect(0, 0, CW, CH); g.strokeStyle = '#ffd23f'; g.lineWidth = 14; g.strokeRect(10, 10, CW - 20, CH - 20); g.fillStyle = '#ffd23f'; g.fillRect(10, 10, CW - 20, 200);
@@ -475,7 +475,7 @@ function threeLayer() {
         else { const cols = n > 80 ? 3 : n > 26 ? 2 : 1, rows = Math.ceil(n / cols), cw = (CW - 100) / cols, lh = Math.min(76, (CH - 310) / rows), fs = Math.min(46, lh * .72);
           g.textAlign = 'left'; names.forEach(([id, gd], i) => { const x = 58 + Math.floor(i / rows) * cw, y = 250 + (i % rows) * lh + lh / 2, s = fit('@' + id, cw - 22, fs, gd ? 800 : 600);
             if (gd) { g.fillStyle = 'rgba(255,210,63,.18)'; g.fillRect(x - 6, y - lh / 2 + 3, cw - 8, lh - 6); g.fillStyle = '#ffd23f'; } else g.fillStyle = 'rgba(255,255,255,.93)'; g.fillText('@' + id, x, y); }); }
-        const tx = tmpl.clone(); tx.source = new tx.source.constructor(c); tx.needsUpdate = true; mat.map = tx; mat.color.setRGB(1, 1, 1); mat.needsUpdate = true; };
+        const tx = tmpl.clone(); tx.source = new tx.source.constructor(c); tx.flipY = true; tx.anisotropy = 4; tx.needsUpdate = true; mat.map = tx; mat.color.setRGB(1, 1, 1); mat.needsUpdate = true; };
       const checkL = () => { if (m.getZoom() < 12.2) return; const b = m.getBounds().toArray(), pad = .05;
         for (const L of (DATA.landmarks || [])) { if (this.towns[L.slug]) continue;
           if (L.lng < b[0][0] - pad || L.lng > b[1][0] + pad || L.lat < b[0][1] - pad || L.lat > b[1][1] + pad) continue;
