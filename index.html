@@ -9,9 +9,9 @@
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
-<link rel="preload" href="data.json?v=11271955" as="fetch" crossorigin>
-<link rel="modulepreload" href="lib/three-bundle.js?v=11271955">
-<link href="lib/maplibre-gl.css?v=11271955" rel="stylesheet">
+<link rel="preload" href="data.json?v=11271990" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11271990">
+<link href="lib/maplibre-gl.css?v=11271990" rel="stylesheet">
 <style>
 @font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
 @font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
@@ -118,9 +118,9 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="lib/maplibre-gl.js?v=11271955" defer></script>
+<script src="lib/maplibre-gl.js?v=11271990" defer></script>
 <script type="module">
-const BUILD='11271955';
+const BUILD='11271990';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
@@ -405,7 +405,8 @@ function mergeStatic(root) {
     const col = !!ms[0].geometry.attributes.color, P = new Float32Array(n * 3), N = new Float32Array(n * 3), C = col ? new Float32Array(n * 3) : null; let o = 0;
     for (const m of ms) { const g = m.geometry, pa = g.attributes.position, na = g.attributes.normal, ca = g.attributes.color, ix = g.index, cnt = ix ? ix.count : pa.count;
       M.multiplyMatrices(inv, m.matrixWorld); const NM = new THREE.Matrix4().copy(M).invert().transpose();
-      for (let i = 0; i < cnt; i++) { const j = ix ? ix.getX(i) : i;
+      const flip = M.determinant() < 0;   // mirrored nodes: keep the triangle winding so faces are not culled
+      for (let i = 0; i < cnt; i++) { const ii = flip ? (i - i % 3) + [0, 2, 1][i % 3] : i, j = ix ? ix.getX(ii) : ii;
         v.fromBufferAttribute(pa, j).applyMatrix4(M); P[o * 3] = v.x; P[o * 3 + 1] = v.y; P[o * 3 + 2] = v.z;
         v.fromBufferAttribute(na, j).transformDirection(NM); N[o * 3] = v.x; N[o * 3 + 1] = v.y; N[o * 3 + 2] = v.z;
         if (C) { C[o * 3] = ca.getX(j); C[o * 3 + 1] = ca.getY(j); C[o * 3 + 2] = ca.getZ(j); } o++; } }
