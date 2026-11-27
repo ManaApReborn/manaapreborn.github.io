@@ -9,9 +9,9 @@
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
-<link rel="preload" href="data.json?v=11271910" as="fetch" crossorigin>
-<link rel="modulepreload" href="lib/three-bundle.js?v=11271910">
-<link href="lib/maplibre-gl.css?v=11271910" rel="stylesheet">
+<link rel="preload" href="data.json?v=11271930" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11271930">
+<link href="lib/maplibre-gl.css?v=11271930" rel="stylesheet">
 <style>
 @font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
 @font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
@@ -118,9 +118,9 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="lib/maplibre-gl.js?v=11271910" defer></script>
+<script src="lib/maplibre-gl.js?v=11271930" defer></script>
 <script type="module">
-const BUILD='11271910';
+const BUILD='11271930';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
@@ -391,6 +391,29 @@ function runFQ() {
     o.root.add(k); o.root.updateMatrixWorld(true);
     (window.__floors = window.__floors || []).push({ id: o.id, ...parts }); }
 }
+// lag fix: merge the static meshes of a town (same material, no texture, default render order) into one draw call each
+function mergeStatic(root) {
+  root.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), M = new THREE.Matrix4(), v = new THREE.Vector3(), groups = new Map();
+  root.traverse(m => { if (!m.isMesh || m.isInstancedMesh || !m.visible || Array.isArray(m.material) || m.material.map || m.material.transparent || m.renderOrder !== 0 || m.children.length) return;
+    let p = m.parent, ok = true; while (p && p !== root) { if (!p.visible) ok = false; p = p.parent; } if (!ok) return;
+    const g = m.geometry; if (!g.attributes.position || !g.attributes.normal || g.morphAttributes.position) return;
+    const key = m.material.uuid + (g.attributes.color ? 'c' : ''); if (!groups.has(key)) groups.set(key, []); groups.get(key).push(m); });
+  let before = 0, after = 0;
+  for (const ms of groups.values()) { before += ms.length; if (ms.length < 2) { after += ms.length; continue; }
+    let n = 0; for (const m of ms) n += m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count;
+    const col = !!ms[0].geometry.attributes.color, P = new Float32Array(n * 3), N = new Float32Array(n * 3), C = col ? new Float32Array(n * 3) : null; let o = 0;
+    for (const m of ms) { const g = m.geometry, pa = g.attributes.position, na = g.attributes.normal, ca = g.attributes.color, ix = g.index, cnt = ix ? ix.count : pa.count;
+      M.multiplyMatrices(inv, m.matrixWorld); const NM = new THREE.Matrix4().copy(M).invert().transpose();
+      for (let i = 0; i < cnt; i++) { const j = ix ? ix.getX(i) : i;
+        v.fromBufferAttribute(pa, j).applyMatrix4(M); P[o * 3] = v.x; P[o * 3 + 1] = v.y; P[o * 3 + 2] = v.z;
+        v.fromBufferAttribute(na, j).transformDirection(NM); N[o * 3] = v.x; N[o * 3 + 1] = v.y; N[o * 3 + 2] = v.z;
+        if (C) { C[o * 3] = ca.getX(j); C[o * 3 + 1] = ca.getY(j); C[o * 3 + 2] = ca.getZ(j); } o++; } }
+    const g0 = ms[0].geometry, geo = new g0.constructor(), BA = g0.attributes.position.constructor;
+    geo.setAttribute('position', new BA(P, 3)); geo.setAttribute('normal', new BA(N, 3)); if (C) geo.setAttribute('color', new BA(C, 3));
+    const mesh = new THREE.Mesh(geo, ms[0].material); mesh.frustumCulled = false; root.add(mesh); ms.forEach(m => m.parent.remove(m)); after++; }
+  return [before, after];
+}
 function garden(sc, pts) {
   const xs = pts.map(p => p[0]), zs = pts.map(p => p[1]), P = 18;
   const x0 = Math.min(...xs) - P, x1 = Math.max(...xs) + P, z0 = Math.min(...zs) - P, z1 = Math.max(...zs) + P, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, d = z1 - z0;
@@ -462,6 +485,7 @@ function threeLayer() {
               { const c = mt.color; if (c && c.r > .45 && c.g < .2 && c.b < .2) { if (mt.isMeshPhysicalMaterial) { x.material = new THREE.MeshStandardMaterial({ color: c.clone(), emissive: c.clone(), emissiveIntensity: .55, roughness: .35, side: THREE.DoubleSide }); } else { mt.emissive = c.clone(); mt.emissiveIntensity = .45; mt.roughness = .35; } } } // reel reds (Guntur chilli) lose their env light in glTF
               if (mt.map && x.renderOrder >= 0) { mt.polygonOffset = true; mt.polygonOffsetFactor = -6; mt.polygonOffsetUnits = -6; x.renderOrder = 2; } } });
             // each town gets its own scene + origin: keeps coordinates small so thin layers don't flicker (float precision)
+            try { window.__merge = window.__merge || {}; window.__merge[d.slug] = mergeStatic(g.scene); } catch (e) { console.warn('merge', e); }
             const sc = this.mkScene(); sc.add(g.scene);
             this.towns[d.slug] = { sc, mc, ms: mc.meterInMercatorCoordinateUnits() }; m.triggerRepaint(); }, undefined, () => { this.towns[d.slug] = null; }); } };
       m.on('moveend', check); check();
