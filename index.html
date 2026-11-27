@@ -120,7 +120,7 @@ body.zstate .town:not(.top){display:none}
 </div>
 <script src="lib/maplibre-gl.js?v=11272005" defer></script>
 <script type="module">
-const BUILD='11272210';
+const BUILD='11272220';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
@@ -393,16 +393,17 @@ function runFQ() {
 }
 // lag fix: merge the static meshes of a town (same material, no texture, default render order) into one draw call each
 // ---------- Day 10: 26 district towers behind the AP Reborn Hall. 1 floor each + 1 floor per follower comment (DATA.towers) ----------
-function districtTowers(hall) {
+function districtTowers(hall, tmpl) {
   const DISTS = []; hall.traverse(o => { const n = o.material && o.material.name; if (n && n.startsWith('BOARD|') && !DISTS.includes(n.slice(6))) DISTS.push(n.slice(6)); });
-  const TWD = DATA.towers || {}, root = new THREE.Group(), tex = [];
+  const Group = Object.getPrototypeOf(THREE.Mesh.prototype).constructor, TWD = DATA.towers || {}, root = new Group(), tex = [];
   const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .8, ...o });
   const mat = { walk: M(0xd9d2c0, { roughness: .95 }), grass: M(0x7cb85a, { roughness: 1 }), stone: M(0xf4f1ea, { roughness: .5 }), slab: M(0xffffff, { roughness: .4 }), navy: M(0x0e1b3d, { roughness: .6 }),
     post: M(0x2b2f38, { roughness: .5, metalness: .5 }), crane: M(0xf2b705, { roughness: .5, metalness: .3 }), rebar: M(0x8a4b2a, { roughness: .6, metalness: .4 }), scaf: M(0xff8a1f, { roughness: .6 }) };
   const add = (geo, m, x, y, z, p) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.frustumCulled = false; p.add(o); return o; };
   const box = (w, h, d, m, x, y, z, p) => add(new THREE.BoxGeometry(w, h, d), m, x, y, z, p);
   const cv = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; };
-  const T = c => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; tex.push(t); return t; };
+  const T = c => { const t = tmpl.clone(); t.source = new t.source.constructor(c); t.flipY = true; t.anisotropy = 4; t.repeat.set(1, 1); t.offset.set(0, 0); t.needsUpdate = true; tex.push(t); return t; };
+  const Basic = t => new THREE.MeshStandardMaterial({ color: 0x000000, map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 1, roughness: 1 });
   const SHORT = { 'Visakhapatnam': 'VIZAG', 'Parvathipuram Manyam': 'MANYAM', 'Alluri Sitharama Raju': 'ALLURI', 'Sri Sathya Sai': 'SATHYA SAI' };
   const GLASS = ['#5aa9e6', '#7fc8a9', '#f2a65a', '#b99ae8', '#6fd3e0', '#f28b82', '#9ccf6b', '#f5c26b'], FH = 4.2;
   const sign = (name, n) => { const [c, g] = cv(512, 150); g.fillStyle = '#0e1b3d'; g.fillRect(0, 0, 512, 150); g.strokeStyle = '#ffd23f'; g.lineWidth = 8; g.strokeRect(4, 4, 504, 142);
@@ -411,27 +412,28 @@ function districtTowers(hall) {
   const plate = (txt, gold) => { const [c, g] = cv(512, 48); g.fillStyle = gold ? '#ffd23f' : '#0e1b3d'; g.fillRect(0, 0, 512, 48); g.fillStyle = gold ? '#0e1b3d' : '#ffd23f'; g.textAlign = 'center'; g.textBaseline = 'middle';
     let s = 32; g.font = `800 ${s}px Poppins`; while (g.measureText(txt).width > 480 && s > 10) { s--; g.font = `800 ${s}px Poppins`; } g.fillText(txt, 256, 26); return T(c); };
   const win = col => { const [c, g] = cv(128, 32); g.fillStyle = col; g.fillRect(0, 0, 128, 32); const gr = g.createLinearGradient(0, 0, 0, 32); gr.addColorStop(0, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(0,0,0,.12)');
-    g.fillStyle = gr; g.fillRect(0, 0, 128, 32); g.fillStyle = 'rgba(255,255,255,.85)'; for (let x = 0; x < 128; x += 16) g.fillRect(x, 0, 2, 32); const t = T(c); t.wrapS = THREE.RepeatWrapping; t.repeat.set(4, 1); return t; };
-  // capital district ground (arc behind the hall)
-  add(new THREE.RingGeometry(128, 218, 96, 1, Math.PI * 1.08, Math.PI * .86).rotateX(Math.PI / 2), mat.grass, 0, .02, 0, root).material.side = THREE.DoubleSide;
-  add(new THREE.RingGeometry(167, 179, 96, 1, Math.PI * 1.08, Math.PI * .86).rotateX(Math.PI / 2), mat.walk, 0, .05, 0, root).material.side = THREE.DoubleSide;
+    g.fillStyle = gr; g.fillRect(0, 0, 128, 32); g.fillStyle = 'rgba(255,255,255,.85)'; for (let x = 0; x < 128; x += 16) g.fillRect(x, 0, 2, 32); const t = T(c); t.wrapS = 1000; t.repeat.set(4, 1); return t; };
+  // capital district ground (arc behind the hall), built from boxes so it merges into one draw call
+  for (let q = 0; q < 64; q++) { const a = (200 + (q + .5) * 152 / 64) * Math.PI / 180, wd = 2 * Math.PI * 218 * (152 / 360) / 64 + 1;
+    const gr = box(wd, .1, 90, mat.grass, Math.cos(a) * 173, .02, Math.sin(a) * 173, root); gr.rotation.y = -a + Math.PI / 2;
+    const wk = box(wd * 173 / 218 + .6, .12, 12, mat.walk, Math.cos(a) * 173, .05, Math.sin(a) * 173, root); wk.rotation.y = -a + Math.PI / 2; }
   const angs = [], A0 = 200, A1 = 352, GAP = [268.5, 283.5];
   const row = (n, r, off) => { const span = (A1 - A0) - (GAP[1] - GAP[0]), st = span / n; for (let i = 0; i < n; i++) { let a = A0 + st * (i + .5 + off); if (a > GAP[0]) a += GAP[1] - GAP[0]; angs.push([a, r]); } };
   row(13, 150, -.25); row(13, 196, .25);
   const glassM = GLASS.map(c => M(0xffffff, { map: win(c), roughness: .15, metalness: .35 }));
   DISTS.forEach((d, i) => { if (!angs[i]) return; const [ad, r] = angs[i], a = ad * Math.PI / 180, x = Math.cos(a) * r, z = Math.sin(a) * r;
-    const grp = new THREE.Group(); grp.position.set(x, 0, z); grp.rotation.y = Math.atan2(-x, -z); root.add(grp);
+    const grp = new Group(); grp.position.set(x, 0, z); grp.rotation.y = Math.atan2(-x, -z); root.add(grp);
     const ids = TWD[d] || [], n = 1 + ids.length, short = SHORT[d] || d.toUpperCase();
     box(22, .6, 22, mat.walk, 0, .3, 0, grp); box(19, 1.2, 19, mat.stone, 0, .6, 0, grp);
     for (let k = 0; k < n; k++) { const y = 1.2 + k * FH;
       box(16, FH - .55, 16, glassM[i % 8], 0, y + (FH - .55) / 2, 0, grp); box(16.7, .55, 16.7, mat.slab, 0, y + FH - .27, 0, grp);
-      const pl = add(new THREE.PlaneGeometry(12, 1.42), new THREE.MeshBasicMaterial({ map: plate(k ? '@' + ids[k - 1] : 'AP REBORN · ' + short, k > 0), toneMapped: false }), 0, y + FH - 1.0, 8.09, grp); }
+      const pl = add(new THREE.BoxGeometry(12, 1.42, .04), Basic(plate(k ? '@' + ids[k - 1] : 'AP REBORN · ' + short, k > 0)), 0, y + FH - 1.0, 8.1, grp); }
     const top = 1.2 + n * FH;
     for (let p = -6; p <= 6; p += 4) for (let q = -6; q <= 6; q += 4) if (Math.abs(p) === 6 || Math.abs(q) === 6) box(.22, 1.8, .22, mat.rebar, p, top + .9, q, grp);
     for (const px of [-6, -2, 2, 6]) box(.18, 3.2, .18, mat.scaf, px, top + 1.6, -6.5, grp); box(12.4, .16, .16, mat.scaf, 0, top + 1.6, -6.5, grp); box(12.4, .16, .16, mat.scaf, 0, top + 3.1, -6.5, grp);
     box(15.6, 5, .4, mat.navy, 0, top + 3.6, 2, grp); box(.35, 1, .35, mat.post, -5.5, top + .5, 0, grp); box(.35, 1, .35, mat.post, 5.5, top + .5, 0, grp);
-    add(new THREE.PlaneGeometry(15, 4.4), new THREE.MeshBasicMaterial({ map: sign(short, n), toneMapped: false }), 0, top + 3.6, 2.21, grp);
-    if (i % 3 === 0) { const cr = new THREE.Group(); cr.position.set(10.5, 0, -6); cr.rotation.y = (i * 1.7) % 3 - 1.5; grp.add(cr);
+    add(new THREE.BoxGeometry(15, 4.4, .04), Basic(sign(short, n)), 0, top + 3.6, 2.22, grp);
+    if (i % 3 === 0) { const cr = new Group(); cr.position.set(10.5, 0, -6); cr.rotation.y = (i * 1.7) % 3 - 1.5; grp.add(cr);
       box(.9, 46, .9, mat.crane, 0, 23, 0, cr); box(26, .8, .8, mat.crane, 8, 46, 0, cr); box(.7, 3, .7, mat.crane, 0, 47.5, 0, cr); box(.12, 10, .12, mat.post, 16, 41, 0, cr); } });
   const st = mergeStatic(root); window.__towers = { dists: DISTS.length, merge: st, tex: tex.length };
   return root;
@@ -557,7 +559,7 @@ function threeLayer() {
             g.scene.traverse(x => { if (!x.isMesh) return; x.frustumCulled = false; const mt = x.material;
               if (mt && mt.name && mt.name.startsWith('BOARD|') && tmpl) paintBoard(mt, mt.name.slice(6), tmpl);
               if (mt && mt.transparent) mt.depthWrite = false; });
-            if (L.slug === 'amaravati-hall') try { g.scene.add(districtTowers(g.scene)); } catch (e) { console.warn('towers', e); }
+            if (L.slug === 'amaravati-hall') try { if (tmpl) g.scene.add(districtTowers(g.scene, tmpl)); } catch (e) { console.warn('towers', e); }
             const sc = this.mkScene(); sc.add(g.scene); this.towns[L.slug] = { sc, mc, ms: mc.meterInMercatorCoordinateUnits() }; m.triggerRepaint(); }, undefined, () => { this.towns[L.slug] = null; }); } };
       m.on('moveend', checkL); checkL();
 
