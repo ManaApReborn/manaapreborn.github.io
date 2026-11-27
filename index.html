@@ -9,9 +9,9 @@
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
-<link rel="preload" href="data.json?v=11271800" as="fetch" crossorigin>
-<link rel="modulepreload" href="lib/three-bundle.js?v=11271800">
-<link href="lib/maplibre-gl.css?v=11271800" rel="stylesheet">
+<link rel="preload" href="data.json?v=11271815" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11271815">
+<link href="lib/maplibre-gl.css?v=11271815" rel="stylesheet">
 <style>
 @font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
 @font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
@@ -118,9 +118,9 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="lib/maplibre-gl.js?v=11271800" defer></script>
+<script src="lib/maplibre-gl.js?v=11271815" defer></script>
 <script type="module">
-const BUILD='11271800';
+const BUILD='11271815';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
@@ -369,9 +369,7 @@ function bakedFloors(root, x, z, f, id, dx) {
   // remove the baked house itself (walls, windows, door, chimney, roof) so a clean 2-storey reel house can stand in its place
   root.updateMatrixWorld(true);
   const M = new THREE.Matrix4(), Z = new THREE.Matrix4().makeScale(0, 0, 0), c = new THREE.Vector3(); let door = null, hidden = 0;
-  // treesOnly (design.clr, Day 10): only trees (green leaves, brown trunks) are moved, so a house can stand where they were
-  const isTree = m => { const c = m.material && m.material.color; if (!c) return false; const h = c.getHexString(); return (c.g > c.r * 1.15 && c.g > c.b * 1.15) || ['7a5536', '7a4a2a', '8a5a3b', '7a5a3c', '6b4a2b'].includes(h); };
-  root.traverse(m => { if (!m.isMesh) return; if (treesOnly && !isTree(m)) return; m.geometry.computeBoundingBox(); const gb = m.geometry.boundingBox;
+  root.traverse(m => { if (!m.isMesh) return; m.geometry.computeBoundingBox(); const gb = m.geometry.boundingBox;
     const test = mw => { const b = gb.clone().applyMatrix4(mw); b.getCenter(c); const d = Math.hypot(c.x - x, c.z - z), h = b.max.y - b.min.y;
       if (d < 5.4 && b.max.y > 1.5) { const w = Math.min(b.max.x - b.min.x, b.max.z - b.min.z); if (b.min.y < .2 && h > 2.4 && h < 3.6 && w < .5) door = [c.x - x, c.z - z]; return true; }
       if (d < 8 && b.min.y > 3 && (b.max.x - b.min.x) > 5) return true; return false; };
