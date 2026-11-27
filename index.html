@@ -9,9 +9,9 @@
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
-<link rel="preload" href="data.json?v=11252130" as="fetch" crossorigin>
-<link rel="modulepreload" href="lib/three-bundle.js?v=11252130">
-<link href="lib/maplibre-gl.css?v=11252130" rel="stylesheet">
+<link rel="preload" href="data.json?v=11271800" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11271800">
+<link href="lib/maplibre-gl.css?v=11271800" rel="stylesheet">
 <style>
 @font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
 @font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
@@ -118,9 +118,9 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="lib/maplibre-gl.js?v=11252130" defer></script>
+<script src="lib/maplibre-gl.js?v=11271800" defer></script>
 <script type="module">
-const BUILD='11252130';
+const BUILD='11271800';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
@@ -348,14 +348,16 @@ function addCar(k) {
   k.add(g); return g;
 }
 // city growth: a park block that gets houses (design.pk rects, metres) has its trees, lamps and benches moved behind the city
-function clearParks(root, pk, box) {
+function clearParks(root, pk, box, treesOnly) {
   root.updateMatrixWorld(true);
   const M = new THREE.Matrix4(), c = new THREE.Vector3(), ws = new THREE.Vector3();
   const ex = Math.max(Math.abs(box[0]), Math.abs(box[1])), ez = Math.max(Math.abs(box[2]), Math.abs(box[3]));
   const out = (x, z) => { const k = Math.max(Math.abs(x) / ex, Math.abs(z) / ez, .05), j = (((Math.round(x / 4) * 7.13 + Math.round(z / 4) * 3.71) % 1) + 1) % 1; const f = (1 + (14 + j * 22) / Math.max(ex, ez)) / k; return [x * f, z * f]; };
-  root.traverse(m => { if (!m.isMesh) return; m.geometry.computeBoundingBox(); const gb = m.geometry.boundingBox;
+  // treesOnly (design.clr, Day 10): only trees (green leaves, brown trunks) are moved, so a house can stand where they were
+  const isTree = m => { const c = m.material && m.material.color; if (!c) return false; const h = c.getHexString(); return (c.g > c.r * 1.15 && c.g > c.b * 1.15) || ['7a5536', '7a4a2a', '8a5a3b', '7a5a3c', '6b4a2b'].includes(h); };
+  root.traverse(m => { if (!m.isMesh) return; if (treesOnly && !isTree(m)) return; m.geometry.computeBoundingBox(); const gb = m.geometry.boundingBox;
     const hit = mw => { const b = gb.clone().applyMatrix4(mw); if (b.max.y - b.min.y < .6 && b.max.y < 2.5) return null; b.getCenter(c);
-      if (Math.max(b.max.x - b.min.x, b.max.z - b.min.z) > 12) return null;
+      if (Math.max(b.max.x - b.min.x, b.max.z - b.min.z) > (treesOnly ? 26 : 12)) return null;
       return pk.some(r => c.x > r[0] && c.x < r[1] && c.z > r[2] && c.z < r[3]) ? [c.x, c.z] : null; };
     m.getWorldScale(ws); const s = ws.x || 1;
     if (m.isInstancedMesh) { let ch = false; for (let i = 0; i < m.count; i++) { m.getMatrixAt(i, M); const h = hit(M.clone().premultiply(m.matrixWorld)); if (!h) continue; const [nx, nz] = out(h[0], h[1]); M.elements[12] += (nx - h[0]) / s; M.elements[14] += (nz - h[1]) / s; m.setMatrixAt(i, M); ch = true; } if (ch) { m.instanceMatrix.needsUpdate = true; m.frustumCulled = false; } }
@@ -367,7 +369,9 @@ function bakedFloors(root, x, z, f, id, dx) {
   // remove the baked house itself (walls, windows, door, chimney, roof) so a clean 2-storey reel house can stand in its place
   root.updateMatrixWorld(true);
   const M = new THREE.Matrix4(), Z = new THREE.Matrix4().makeScale(0, 0, 0), c = new THREE.Vector3(); let door = null, hidden = 0;
-  root.traverse(m => { if (!m.isMesh) return; m.geometry.computeBoundingBox(); const gb = m.geometry.boundingBox;
+  // treesOnly (design.clr, Day 10): only trees (green leaves, brown trunks) are moved, so a house can stand where they were
+  const isTree = m => { const c = m.material && m.material.color; if (!c) return false; const h = c.getHexString(); return (c.g > c.r * 1.15 && c.g > c.b * 1.15) || ['7a5536', '7a4a2a', '8a5a3b', '7a5a3c', '6b4a2b'].includes(h); };
+  root.traverse(m => { if (!m.isMesh) return; if (treesOnly && !isTree(m)) return; m.geometry.computeBoundingBox(); const gb = m.geometry.boundingBox;
     const test = mw => { const b = gb.clone().applyMatrix4(mw); b.getCenter(c); const d = Math.hypot(c.x - x, c.z - z), h = b.max.y - b.min.y;
       if (d < 5.4 && b.max.y > 1.5) { const w = Math.min(b.max.x - b.min.x, b.max.z - b.min.z); if (b.min.y < .2 && h > 2.4 && h < 3.6 && w < .5) door = [c.x - x, c.z - z]; return true; }
       if (d < 8 && b.min.y > 3 && (b.max.x - b.min.x) > 5) return true; return false; };
@@ -447,7 +451,7 @@ function threeLayer() {
           this.loader.loadZ(d.slug, g => { const mc = maplibregl.MercatorCoordinate.fromLngLat([d.lng, d.lat], 0);
             g.scene.scale.setScalar(DATA.scale);
             const flats = []; g.scene.updateMatrixWorld(true);
-            { if (d.pk) clearParks(g.scene, d.pk, d.box); if (d.ext) { extRoads(g.scene, d.ext, DATA.scale); g.scene.updateMatrixWorld(true); } const kx = 111320 * Math.cos(d.lat * Math.PI / 180); for (const h of DATA.houses) if (h.z && (h.f || h.dx) && h.d === d.d) bakedFloors(g.scene, (h.lng - d.lng) * kx, (d.lat - h.lat) * 110574, Math.max(h.f || 0, h.dx ? 1 : 0), h.id, h.dx); g.scene.updateMatrixWorld(true); }
+            { if (d.pk) clearParks(g.scene, d.pk, d.box); if (d.clr) clearParks(g.scene, d.clr, d.box, true); if (d.ext) { extRoads(g.scene, d.ext, DATA.scale); g.scene.updateMatrixWorld(true); } const kx = 111320 * Math.cos(d.lat * Math.PI / 180); for (const h of DATA.houses) if (h.z && (h.f || h.dx) && h.d === d.d) bakedFloors(g.scene, (h.lng - d.lng) * kx, (d.lat - h.lat) * 110574, Math.max(h.f || 0, h.dx ? 1 : 0), h.id, h.dx); g.scene.updateMatrixWorld(true); }
             g.scene.traverse(x => { if (!x.isMesh) return; x.geometry.computeBoundingBox(); const bb = x.geometry.boundingBox.clone().applyMatrix4(x.matrixWorld);
               if (bb.max.y - bb.min.y < .6) flats.push([bb.max.y, (bb.max.x - bb.min.x) * (bb.max.z - bb.min.z), x]); });
             // ground layers (grass, sand, water, walks, roads, dashes) are painted bottom-up instead of depth-tested against each other:
