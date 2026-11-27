@@ -9,9 +9,9 @@
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
-<link rel="preload" href="data.json?v=11271900" as="fetch" crossorigin>
-<link rel="modulepreload" href="lib/three-bundle.js?v=11271900">
-<link href="lib/maplibre-gl.css?v=11271900" rel="stylesheet">
+<link rel="preload" href="data.json?v=11271910" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11271910">
+<link href="lib/maplibre-gl.css?v=11271910" rel="stylesheet">
 <style>
 @font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
 @font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
@@ -118,9 +118,9 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="lib/maplibre-gl.js?v=11271900" defer></script>
+<script src="lib/maplibre-gl.js?v=11271910" defer></script>
 <script type="module">
-const BUILD='11271900';
+const BUILD='11271910';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
@@ -211,7 +211,7 @@ function onLoad() {
   // AMARAVATI capital pill (gold on black): the AP Reborn Hall landmark
   (DATA.landmarks || []).forEach(L => { const el = document.createElement('div'); el.className = 'amv'; el.innerHTML = '<b>Amaravati</b><i>C</i>'; el.title = 'Capital · AP Reborn Hall';
     el.onclick = e => { e.stopPropagation(); map.flyTo({ center: [L.lng, L.lat - .0012], zoom: 17.3, pitch: 60, bearing: 0, duration: 2600 }); };
-    new maplibregl.Marker({ element: el, anchor: 'bottom-right', offset: [4, 0] }).setLngLat([L.lng, L.lat]).addTo(map); });
+    new maplibregl.Marker({ element: el, anchor: 'bottom-right', offset: [-46, -2] }).setLngLat([L.lng, L.lat]).addTo(map); });
   const zt = () => { const z = map.getZoom(); document.body.classList.toggle('zin', z > 14.3); document.body.classList.toggle('zfar', z < 8.4); document.body.classList.toggle('zstate', z < 7.2); }; map.on('zoom', zt); zt();
 
   map.on('click', 'house-hit', e => { const f = e.features[0]; if (f) select(f.properties.k, false); });
