@@ -9,9 +9,9 @@
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
-<link rel="preload" href="data.json?v=11271815" as="fetch" crossorigin>
-<link rel="modulepreload" href="lib/three-bundle.js?v=11271815">
-<link href="lib/maplibre-gl.css?v=11271815" rel="stylesheet">
+<link rel="preload" href="data.json?v=11271900" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11271900">
+<link href="lib/maplibre-gl.css?v=11271900" rel="stylesheet">
 <style>
 @font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
 @font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
@@ -76,7 +76,7 @@ body.zstate .town:not(.top){display:none}
 #load{position:absolute;inset:0;display:grid;place-items:center;z-index:20;background:#cfe8ef;font-weight:800;font-size:16px;transition:opacity .4s}
 .maplibregl-ctrl-attrib{font-size:10px}
 @media (min-width:760px){#bar{bottom:20px}}
-.amv{background:#0b0b0d;border:2px solid #d4a72c;border-radius:12px;padding:4px 12px 3px;display:flex;flex-direction:column;align-items:center;box-shadow:0 3px 0 #6b5310,0 6px 18px rgba(0,0,0,.35);cursor:pointer;z-index:2000;line-height:1.05}.amv b{font:800 15px Poppins,sans-serif;letter-spacing:2px;background:linear-gradient(180deg,#fff2b0,#ffd23f 45%,#b8860b);-webkit-background-clip:text;background-clip:text;color:transparent}.amv i{font:700 7.5px Poppins,sans-serif;font-style:normal;letter-spacing:1.5px;color:#d9b24a}body.zin .amv{display:none}
+.amv{background:var(--cream);border:2px solid var(--navy);border-radius:20px;padding:3px 4px 3px 10px;display:flex;align-items:center;gap:6px;box-shadow:0 2.5px 0 var(--navy),0 0 0 3px rgba(255,210,63,.45);cursor:pointer;z-index:2000;white-space:nowrap}.amv b{font:800 14px Poppins,sans-serif;letter-spacing:.3px;background:linear-gradient(180deg,#e9a800,#a8700a);-webkit-background-clip:text;background-clip:text;color:transparent}.amv i{font:800 12px Poppins,sans-serif;font-style:normal;width:20px;height:20px;border-radius:50%;background:linear-gradient(180deg,#ffe27a,#e0a800);color:#0e1b3d;border:1.5px solid var(--navy);display:grid;place-items:center;line-height:1}body.zin .amv{display:none}
 </style>
 </head>
 <body>
@@ -118,9 +118,9 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="lib/maplibre-gl.js?v=11271815" defer></script>
+<script src="lib/maplibre-gl.js?v=11271900" defer></script>
 <script type="module">
-const BUILD='11271815';
+const BUILD='11271900';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
@@ -209,9 +209,9 @@ function onLoad() {
     new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([t.lng, t.lat]).addTo(map);
   });
   // AMARAVATI capital pill (gold on black): the AP Reborn Hall landmark
-  (DATA.landmarks || []).forEach(L => { const el = document.createElement('div'); el.className = 'amv'; el.innerHTML = '<b>AMARAVATI</b><i>AP REBORN HALL</i>';
+  (DATA.landmarks || []).forEach(L => { const el = document.createElement('div'); el.className = 'amv'; el.innerHTML = '<b>Amaravati</b><i>C</i>'; el.title = 'Capital · AP Reborn Hall';
     el.onclick = e => { e.stopPropagation(); map.flyTo({ center: [L.lng, L.lat - .0012], zoom: 17.3, pitch: 60, bearing: 0, duration: 2600 }); };
-    new maplibregl.Marker({ element: el, anchor: 'bottom-right', offset: [8, 4] }).setLngLat([L.lng, L.lat]).addTo(map); });
+    new maplibregl.Marker({ element: el, anchor: 'bottom-right', offset: [4, 0] }).setLngLat([L.lng, L.lat]).addTo(map); });
   const zt = () => { const z = map.getZoom(); document.body.classList.toggle('zin', z > 14.3); document.body.classList.toggle('zfar', z < 8.4); document.body.classList.toggle('zstate', z < 7.2); }; map.on('zoom', zt); zt();
 
   map.on('click', 'house-hit', e => { const f = e.features[0]; if (f) select(f.properties.k, false); });
@@ -498,7 +498,12 @@ function threeLayer() {
       this.camera.projectionMatrix = new THREE.Matrix4().fromArray(matrix).multiply(l);
       this.renderer.resetState();
       const PM = new THREE.Matrix4().fromArray(matrix);
+      // lag fix: draw only the town scenes that are on screen, and none when zoomed far out (pills + dots show the map there)
+      const z = this.map.getZoom(); if (z < 10.6) return;
+      const bb = this.map.getBounds(), c1 = maplibregl.MercatorCoordinate.fromLngLat(bb.getNorthWest()), c2 = maplibregl.MercatorCoordinate.fromLngLat(bb.getSouthEast());
+      const pad = (c2.x - c1.x) * .25 + s * 1500, x0 = Math.min(c1.x, c2.x) - pad, x1 = Math.max(c1.x, c2.x) + pad, y0 = Math.min(c1.y, c2.y) - pad, y1 = Math.max(c1.y, c2.y) + pad;
       for (const k in this.towns) { const t = this.towns[k]; if (!t || t === 'loading') continue;
+        if (t.mc.x < x0 || t.mc.x > x1 || t.mc.y < y0 || t.mc.y > y1) continue;
         const lt = new THREE.Matrix4().makeTranslation(t.mc.x, t.mc.y, 0).scale(new THREE.Vector3(t.ms, -t.ms, t.ms)).multiply(rot);
         this.camera.projectionMatrix = PM.clone().multiply(lt); this.renderer.render(t.sc, this.camera); }
     }
