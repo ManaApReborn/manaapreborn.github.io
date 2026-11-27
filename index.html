@@ -9,9 +9,9 @@
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
-<link rel="preload" href="data.json?v=11271990" as="fetch" crossorigin>
-<link rel="modulepreload" href="lib/three-bundle.js?v=11271990">
-<link href="lib/maplibre-gl.css?v=11271990" rel="stylesheet">
+<link rel="preload" href="data.json?v=11272005" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11272005">
+<link href="lib/maplibre-gl.css?v=11272005" rel="stylesheet">
 <style>
 @font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
 @font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
@@ -118,9 +118,9 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="lib/maplibre-gl.js?v=11271990" defer></script>
+<script src="lib/maplibre-gl.js?v=11272005" defer></script>
 <script type="module">
-const BUILD='11271990';
+const BUILD='11272005';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
@@ -460,7 +460,6 @@ function threeLayer() {
           // new houses inside a reel city (t = HQ town) blend into the city: no garden there; villages with 4+ houses get one
           if (hs.length >= 4 && !DATA.towns.some(x => x.t === t && x.hq)) garden(sc, hs.flatMap(h => { const mc = maplibregl.MercatorCoordinate.fromLngLat([h.lng, h.lat], 0), px = (mc.x - oc.x) / ms, pz = (mc.y - oc.y) / ms; return h.dx ? [[px - 5, pz - 3], [px + 5, pz - 3], [px - 5, pz + 3], [px + 5, pz + 3]] : [[px, pz]]; }));
           sc.traverse(x => { if (x.isMesh) x.frustumCulled = false; });
-          try { mergeStatic(sc); } catch (e) { console.warn('merge', e); }
           this.towns['c:' + t] = { sc, mc: oc, ms }; }
         m.triggerRepaint(); });
       this.loader.loadZ('duplex', dg => { DXT = dg.scene; loadHouses(); }, undefined, () => loadHouses());
