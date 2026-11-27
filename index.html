@@ -9,9 +9,9 @@
 <meta property="og:description" content="AP map lo mee ooru lo mee virtual illu. Mee Instagram ID type chesi vethakandi 👀">
 <meta name="theme-color" content="#1a2444">
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
-<link rel="preload" href="data.json?v=11271945" as="fetch" crossorigin>
-<link rel="modulepreload" href="lib/three-bundle.js?v=11271945">
-<link href="lib/maplibre-gl.css?v=11271945" rel="stylesheet">
+<link rel="preload" href="data.json?v=11271955" as="fetch" crossorigin>
+<link rel="modulepreload" href="lib/three-bundle.js?v=11271955">
+<link href="lib/maplibre-gl.css?v=11271955" rel="stylesheet">
 <style>
 @font-face{font-family:Poppins;font-weight:500;font-display:swap;src:url(lib/fonts/poppins-latin-500-normal.woff2) format('woff2')}
 @font-face{font-family:Poppins;font-weight:600;font-display:swap;src:url(lib/fonts/poppins-latin-600-normal.woff2) format('woff2')}
@@ -118,9 +118,9 @@ body.zstate .town:not(.top){display:none}
   <button id="bRnd"><span>🎲</span>Random</button>
   <button id="bJ" class="cta"><span>＋</span>Mee illu kavala?</button>
 </div>
-<script src="lib/maplibre-gl.js?v=11271945" defer></script>
+<script src="lib/maplibre-gl.js?v=11271955" defer></script>
 <script type="module">
-const BUILD='11271945';
+const BUILD='11271955';
 // 3D code loads in parallel with the map + data (not before them): the flat map shows first, houses appear when ready
 let THREE, GLTFLoader, MeshoptDecoder, RoomEnvironment;
 const threeReady = import('./lib/three-bundle.js?v=' + BUILD).then(m => { THREE = m; ({ GLTFLoader, MeshoptDecoder, RoomEnvironment } = m); });
@@ -409,7 +409,7 @@ function mergeStatic(root) {
         v.fromBufferAttribute(pa, j).applyMatrix4(M); P[o * 3] = v.x; P[o * 3 + 1] = v.y; P[o * 3 + 2] = v.z;
         v.fromBufferAttribute(na, j).transformDirection(NM); N[o * 3] = v.x; N[o * 3 + 1] = v.y; N[o * 3 + 2] = v.z;
         if (C) { C[o * 3] = ca.getX(j); C[o * 3 + 1] = ca.getY(j); C[o * 3 + 2] = ca.getZ(j); } o++; } }
-    const g0 = ms[0].geometry, geo = new g0.constructor(), BA = g0.attributes.position.constructor;
+    const bx = new THREE.BoxGeometry(1, 1, 1), BG = Object.getPrototypeOf(THREE.BoxGeometry.prototype).constructor, BA = bx.attributes.position.constructor, geo = new BG(); bx.dispose();
     geo.setAttribute('position', new BA(P, 3)); geo.setAttribute('normal', new BA(N, 3)); if (C) geo.setAttribute('color', new BA(C, 3));
     const mesh = new THREE.Mesh(geo, ms[0].material); mesh.frustumCulled = false; root.add(mesh); ms.forEach(m => m.parent.remove(m)); after++; }
   return [before, after];
